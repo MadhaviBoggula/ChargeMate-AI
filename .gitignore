@@ -1,0 +1,43 @@
+# Secrets - NEVER commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Embedding / model caches
+models/
+*.faiss
+*.index
+
+# Knowledge-base ingestion temp
+knowledge_base/tmp/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Alembic
+migrations/versions/__pycache__/
+
+# Word/doc artifacts
+~$*
+ChargeMate_AI_Backend_Team_Task_Allocation.docx
+ChargeMate_AI_Product_Overview_and_Technical_Brief_v1.1.md

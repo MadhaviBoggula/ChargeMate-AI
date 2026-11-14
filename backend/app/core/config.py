@@ -1,5 +1,6 @@
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -46,6 +47,12 @@ class Settings(BaseSettings):
     rag_chunk_overlap: int = 150
     rag_top_k: int = 4
     rag_min_score: float = 0.35
+
+    knowledge_base_dir: Path = (
+        Path(__file__).resolve().parents[2] / "knowledge_base"
+    )
+    owner_knowledge_dir: Path = knowledge_base_dir / "owner"
+    driver_knowledge_dir: Path = knowledge_base_dir / "driver"
 
 
 @lru_cache

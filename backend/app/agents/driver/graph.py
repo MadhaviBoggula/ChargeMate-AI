@@ -21,12 +21,13 @@ def build_driver_graph(
     """
 
     from app.mcp.client import get_default_tool_registry
+    from app.rag.retriever import retrieve_for_role
 
     return build_agent_graph(
         role="driver",
         llm=llm,
         tool_registry=tool_registry or get_default_tool_registry("driver"),
-        retriever=retriever,
+        retriever=retriever or retrieve_for_role,
         max_tool_rounds=max_tool_rounds,
     )
 

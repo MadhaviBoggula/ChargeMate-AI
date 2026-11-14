@@ -239,6 +239,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "langchain-core" },
     { name = "langchain-huggingface" },
+    { name = "langchain-text-splitters" },
     { name = "langgraph" },
     { name = "mcp" },
     { name = "openai" },
@@ -268,6 +269,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "langchain-core", specifier = "==0.3.29" },
     { name = "langchain-huggingface", specifier = "==0.1.2" },
+    { name = "langchain-text-splitters", specifier = "==0.3.4" },
     { name = "langgraph", specifier = "==0.2.60" },
     { name = "mcp", specifier = ">=1.9.0,<2.0.0" },
     { name = "openai", specifier = ">=1.60.0" },
@@ -1257,6 +1259,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a1/0f/8277d993d5307f06523e72c9bc8a505ed028f7b1c1e5276d8e89044b6036/langchain_huggingface-0.1.2.tar.gz", hash = "sha256:4a66d5c449298fd353bd84c9ed01f9bf4303bf2e4ffce14aab8c55c584eee57c", size = 16129, upload-time = "2024-10-31T18:56:53.894Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9d/f8/77a303ddc492f6eed8bf0979f2bc6db4fa6eb1089c5e9f0f977dd87bc9c2/langchain_huggingface-0.1.2-py3-none-any.whl", hash = "sha256:7de5cfcae32bfb6a99c084fc16176f02583a4f8d94febb6bb45bed5b34699174", size = 21251, upload-time = "2024-10-31T18:56:52.21Z" },
+]
+
+[[package]]
+name = "langchain-text-splitters"
+version = "0.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/10/a5/215816cc376c4f3853c961ae98022a6d57e74f6859c206f29716173e9a73/langchain_text_splitters-0.3.4.tar.gz", hash = "sha256:f3cedea469684483b4492d9f11dc2fa66388dab01c5d5c5307925515ab884c24", size = 22205, upload-time = "2024-12-18T17:50:53.357Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/37/b2c971dfea62675f640e0dd5a078ca502885059276d21b7143cf1fe13e82/langchain_text_splitters-0.3.4-py3-none-any.whl", hash = "sha256:432fdb39c161d4d0db16d61d38af068dc5dd4dd08082febd2fced81304b2725c", size = 27783, upload-time = "2024-12-18T17:50:51.396Z" },
 ]
 
 [[package]]

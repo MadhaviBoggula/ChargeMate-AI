@@ -139,7 +139,7 @@ def create_nodes(
         role = state.get("role", "driver")
         request = state.get("current_request") or ""
 
-        tool_schemas = tool_registry.list_tools(role)
+        tool_schemas = await tool_registry.list_tools(role)
         tool_names = tool_schemas_to_names(tool_schemas)
 
         prompt = ROUTING_PROMPT.format(
@@ -184,7 +184,7 @@ def create_nodes(
         request = state.get("current_request") or ""
         history = state.get("messages") or []
 
-        schemas = tool_registry.list_tools(role)
+        schemas = await tool_registry.list_tools(role)
 
         if not schemas:
             return {

@@ -20,10 +20,12 @@ def build_driver_graph(
     and confirmation_action injected by the chat API.
     """
 
+    from app.mcp.client import get_default_tool_registry
+
     return build_agent_graph(
         role="driver",
         llm=llm,
-        tool_registry=tool_registry,
+        tool_registry=tool_registry or get_default_tool_registry("driver"),
         retriever=retriever,
         max_tool_rounds=max_tool_rounds,
     )

@@ -18,10 +18,12 @@ def build_owner_graph(
     the shared building blocks.
     """
 
+    from app.mcp.client import get_default_tool_registry
+
     return build_agent_graph(
         role="owner",
         llm=llm,
-        tool_registry=tool_registry,
+        tool_registry=tool_registry or get_default_tool_registry("owner"),
         retriever=retriever,
         max_tool_rounds=max_tool_rounds,
     )

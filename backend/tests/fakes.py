@@ -80,7 +80,7 @@ class FakeToolRegistry:
         self.error_tools = set(error_tools or set())
         self.invocations = []
 
-    def list_tools(self, role):
+    async def list_tools(self, role):
         return [
             {
                 "type": "function",

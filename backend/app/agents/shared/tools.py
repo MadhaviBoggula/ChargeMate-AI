@@ -26,7 +26,7 @@ def normalize_tool_result(
 class ToolRegistry(Protocol):
     """Interface the MCP integration layer implements per role."""
 
-    def list_tools(self, role: str) -> list[dict[str, Any]]:
+    async def list_tools(self, role: str) -> list[dict[str, Any]]:
         """Return OpenAI-style tool schemas exposed to the given role."""
 
     async def invoke_tool(
@@ -46,7 +46,7 @@ class EmptyToolRegistry:
     instead of failing.
     """
 
-    def list_tools(self, role: str) -> list[dict[str, Any]]:
+    async def list_tools(self, role: str) -> list[dict[str, Any]]:
         return []
 
     async def invoke_tool(

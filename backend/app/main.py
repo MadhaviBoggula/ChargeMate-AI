@@ -1,10 +1,12 @@
 
+
 import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes.auth import router as auth_router
@@ -12,6 +14,7 @@ from app.api.routes.chat import router as chat_router
 from app.api.routes.conversations import (
     router as conversations_router,
 )
+from app.api.routes.stations import router as stations_router
 from app.core.config import settings
 from app.database.session import engine
 from app.mcp.client import close_mcp_connections
@@ -74,6 +77,19 @@ app = FastAPI(
 )
 
 
+# Allow the Next.js frontend to communicate with FastAPI
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # Authentication API routes
 app.include_router(
     auth_router,
@@ -95,6 +111,14 @@ app.include_router(
     chat_router,
     prefix=f"{settings.api_v1_prefix}/chat",
     tags=["Chat"],
+)
+
+
+# Charging station API routes
+app.include_router(
+    stations_router,
+    prefix=f"{settings.api_v1_prefix}/stations",
+    tags=["Charging Stations"],
 )
 
 

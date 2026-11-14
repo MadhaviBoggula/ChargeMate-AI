@@ -1,12 +1,19 @@
 
 
+
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import BrandLogo from "../../components/brand-logo";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+const TOKEN_KEY = "chargemate_access_token";
+
 type Station = {
-  id: number;
+  id: string;
   name: string;
   location: string;
   address: string;
@@ -27,73 +34,6 @@ type FilterOption = {
   detail: string;
   icon: string;
 };
-
-const stations: Station[] = [
-  {
-    id: 1,
-    name: "ChargeMate Central",
-    location: "Benz Circle",
-    address: "Benz Circle, Vijayawada, Andhra Pradesh",
-    connectors: ["CCS2", "Type 2"],
-    chargerType: "DC",
-    power: 60,
-    speed: "Fast",
-    available: 5,
-    total: 8,
-    price: 18,
-    status: "Available",
-    description:
-      "A convenient charging destination with fast charging support and multiple connector options.",
-  },
-  {
-    id: 2,
-    name: "Green Energy Hub",
-    location: "MG Road",
-    address: "MG Road, Vijayawada, Andhra Pradesh",
-    connectors: ["Type 2"],
-    chargerType: "AC",
-    power: 22,
-    speed: "Standard",
-    available: 3,
-    total: 6,
-    price: 15,
-    status: "Available",
-    description:
-      "An everyday charging option designed for convenient standard charging.",
-  },
-  {
-    id: 3,
-    name: "Urban Charge Point",
-    location: "Auto Nagar",
-    address: "Auto Nagar, Vijayawada, Andhra Pradesh",
-    connectors: ["CCS2", "CHAdeMO"],
-    chargerType: "DC",
-    power: 90,
-    speed: "Fast",
-    available: 2,
-    total: 5,
-    price: 20,
-    status: "Limited",
-    description:
-      "A high-power charging option with DC charging support.",
-  },
-  {
-    id: 4,
-    name: "EcoDrive Station",
-    location: "Poranki",
-    address: "Poranki, Vijayawada, Andhra Pradesh",
-    connectors: ["Type 2", "CCS2"],
-    chargerType: "AC",
-    power: 30,
-    speed: "Standard",
-    available: 4,
-    total: 7,
-    price: 16,
-    status: "Available",
-    description:
-      "A practical charging option with multiple connector standards.",
-  },
-];
 
 const connectorOptions: FilterOption[] = [
   {
@@ -868,6 +808,15 @@ function StationCard({
 }
 
 export default function StationsPage() {
+  const router = useRouter();
+
+  const [authChecking, setAuthChecking] = useState(true);
+  const [authError, setAuthError] = useState("");
+
+  const [stations, setStations] = useState<Station[]>([]);
+  const [stationsLoading, setStationsLoading] = useState(true);
+  const [stationsError, setStationsError] = useState("");
+
   const [search, setSearch] = useState("");
   const [connector, setConnector] = useState("All");
   const [chargerType, setChargerType] = useState("All");
@@ -876,9 +825,164 @@ export default function StationsPage() {
   const [maxPrice, setMaxPrice] = useState("0");
   const [minPower, setMinPower] = useState("0");
   const [vehicleConnector, setVehicleConnector] = useState("All");
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+
+  // Verify the logged-in user before displaying the Stations page.
+  useEffect(() => {
+    let active = true;
+
+    async function verifyAuthentication() {
+      const token = sessionStorage.getItem(TOKEN_KEY);
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem(TOKEN_KEY);
+          router.replace("/login");
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Unable to verify your account.");
+        }
+
+        if (active) {
+          setAuthChecking(false);
+          setAuthError("");
+        }
+      } catch {
+        if (active) {
+          setAuthError(
+            "Unable to connect to the server. Please check that the backend is running.",
+          );
+          setAuthChecking(false);
+        }
+      }
+    }
+
+    verifyAuthentication();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  // Load active charging stations from the authenticated backend.
+  useEffect(() => {
+    if (authChecking || authError) return;
+
+    let active = true;
+
+    async function loadStations() {
+      setStationsLoading(true);
+      setStationsError("");
+
+      const token = sessionStorage.getItem(TOKEN_KEY);
+
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/v1/stations`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          },
+        );
+
+        if (response.status === 401 || response.status === 403) {
+          sessionStorage.removeItem(TOKEN_KEY);
+          router.replace("/login");
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            `Unable to load stations. Server returned ${response.status}.`,
+          );
+        }
+
+        const data: Array<{
+          id: string;
+          name: string;
+          location: string;
+          address: string;
+          connectors: string[];
+          charger_type: "DC" | "AC";
+          power: number;
+          speed: "Fast" | "Standard";
+          available_slots: number;
+          total_slots: number;
+          price_per_kwh: number;
+          description: string;
+          is_active: boolean;
+        }> = await response.json();
+
+        const mappedStations: Station[] = data.map((item) => ({
+          id: item.id,
+          name: item.name,
+          location: item.location,
+          address: item.address,
+          connectors: item.connectors,
+          chargerType: item.charger_type,
+          power: item.power,
+          speed: item.speed,
+          available: item.available_slots,
+          total: item.total_slots,
+          price: item.price_per_kwh,
+          status:
+            item.available_slots === 0
+              ? "Full"
+              : item.available_slots <= 2
+                ? "Limited"
+                : "Available",
+          description: item.description,
+        }));
+
+        if (active) {
+          setStations(mappedStations);
+          setStationsError("");
+        }
+      } catch (error) {
+        if (active) {
+          setStationsError(
+            error instanceof Error
+              ? error.message
+              : "Something went wrong while loading stations.",
+          );
+        }
+      } finally {
+        if (active) {
+          setStationsLoading(false);
+        }
+      }
+    }
+
+    loadStations();
+
+    return () => {
+      active = false;
+    };
+  }, [authChecking, authError, router]);
 
   const filteredStations = useMemo(() => {
     return stations.filter((station) => {
@@ -923,6 +1027,7 @@ export default function StationsPage() {
       );
     });
   }, [
+    stations,
     search,
     connector,
     vehicleConnector,
@@ -957,11 +1062,53 @@ export default function StationsPage() {
     setShowFavorites(false);
   }
 
-  function toggleFavorite(id: number) {
+  function toggleFavorite(id: string) {
     setFavorites((previous) =>
       previous.includes(id)
         ? previous.filter((item) => item !== id)
         : [...previous, id],
+    );
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem(TOKEN_KEY);
+    router.replace("/login");
+  }
+
+  if (authChecking) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f5f9ff]">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
+          <p className="mt-4 text-lg font-semibold text-slate-700">
+            Verifying your ChargeMate account...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (authError) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f5f9ff] px-6">
+        <p className="max-w-lg text-center text-red-600">{authError}</p>
+
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-xl bg-[#10294b] px-5 py-3 font-semibold text-white"
+        >
+          Try again
+        </button>
+
+        <button
+          type="button"
+          onClick={() => router.replace("/login")}
+          className="font-semibold text-blue-700"
+        >
+          Back to login
+        </button>
+      </main>
     );
   }
 
@@ -994,12 +1141,13 @@ export default function StationsPage() {
             ))}
           </nav>
 
-          <a
-            href="/login"
-            className="rounded-full border border-emerald-300 bg-white px-5 py-2.5 text-sm font-bold text-emerald-800 shadow-sm transition-all duration-300 hover:border-emerald-200 hover:bg-emerald-100 hover:text-emerald-900 hover:shadow-lg hover:shadow-emerald-100"
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-full border border-rose-200 bg-white px-5 py-2.5 text-sm font-bold text-rose-700 shadow-sm transition-all duration-300 hover:border-rose-300 hover:bg-rose-50"
           >
-            Sign In
-          </a>
+            Logout
+          </button>
         </div>
       </header>
 
@@ -1053,7 +1201,7 @@ export default function StationsPage() {
                   {stations.length}
                 </p>
                 <p className="mt-1 text-xs font-medium text-blue-100">
-                  Sample stations
+                  Live stations
                 </p>
               </div>
 
@@ -1063,14 +1211,13 @@ export default function StationsPage() {
                   {stations.reduce((sum, item) => sum + item.available, 0)}
                 </p>
                 <p className="mt-1 text-xs font-medium text-blue-100">
-                  Sample available slots
+                  Available slots
                 </p>
               </div>
             </div>
 
             <p className="mt-4 text-xs leading-6 text-blue-100/80">
-              Demonstration data for the station discovery interface. Slot
-              availability and prices are not live.
+              Station information is loaded from the ChargeMate backend.
             </p>
           </div>
         </div>
@@ -1241,7 +1388,7 @@ export default function StationsPage() {
               Explore nearby options
             </h2>
             <p className="mt-2 text-sm text-slate-500">
-              Charging station examples in Vijayawada.
+              Explore charging stations and their current recorded availability.
             </p>
           </div>
 
@@ -1278,11 +1425,37 @@ export default function StationsPage() {
           </div>
 
           <span className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:inline-flex">
-            Demo station data
+            Backend station data
           </span>
         </div>
 
-        {filteredStations.length > 0 ? (
+        {stationsLoading ? (
+          <div className="mt-7 rounded-[28px] border border-slate-200 bg-white px-6 py-16 text-center">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
+            <h3 className="mt-5 text-xl font-extrabold text-slate-800">
+              Loading charging stations...
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Connecting to the ChargeMate backend.
+            </p>
+          </div>
+        ) : stationsError ? (
+          <div className="mt-7 rounded-[28px] border border-rose-200 bg-white px-6 py-16 text-center">
+            <h3 className="text-xl font-extrabold text-rose-700">
+              Unable to load stations
+            </h3>
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
+              {stationsError}
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-6 rounded-full bg-[#10294b] px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+            >
+              Try again
+            </button>
+          </div>
+        ) : filteredStations.length > 0 ? (
           <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filteredStations.map((station) => (
               <StationCard
@@ -1403,9 +1576,9 @@ export default function StationsPage() {
               {selectedStation.description}
             </p>
 
-            <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-              Demonstration information only. Station availability and prices
-              are sample values, not live service data.
+            <p className="mt-4 rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-800">
+              Station information is retrieved from the ChargeMate backend.
+              Availability reflects the latest data stored by the service.
             </p>
 
             <button
@@ -1417,7 +1590,7 @@ export default function StationsPage() {
             </button>
           </div>
         </div>
-      )}
+         )}
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">

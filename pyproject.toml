@@ -1,0 +1,31 @@
+[project]
+name = "chargemate-ai-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "chinmaimasani", email = "chinmai26071998@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.141.1",
+    "psycopg[binary]>=3.3.6",
+    "psycopg2-binary>=2.9.13",
+    "pydantic-settings>=2.15.0",
+    "python-dotenv>=1.2.3",
+    "sqlalchemy>=2.1.6",
+    "uvicorn>=0.52.4",
+    "alembic>=1.20.1",
+    "email-validator>=2.3.0",
+    "python-jose>=3.5.0",
+    "passlib>=1.7.4",
+    "bcrypt==4.0.1",
+    "python-multipart>=0.0.32",
+]
+
+[project.scripts]
+chargemate-ai-backend = "chargemate_ai_backend:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"

@@ -19,6 +19,9 @@ from app.core.config import settings
 from app.database.session import engine
 from app.mcp.client import close_mcp_connections
 
+from app.routers.addresses import router as addresses_router
+from app.routers.owner import router as owner_router
+
 
 # Structured JSON logging
 class JSONFormatter(logging.Formatter):
@@ -121,6 +124,8 @@ app.include_router(
     tags=["Charging Stations"],
 )
 
+app.include_router(addresses_router)
+app.include_router(owner_router)
 
 # Liveness check
 @app.get("/health", tags=["Health"])

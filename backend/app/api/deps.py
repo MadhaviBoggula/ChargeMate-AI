@@ -47,3 +47,14 @@ def get_current_user(
         raise unauthorized
 
     return user
+
+def get_owner_id(
+    current_user=Depends(get_current_user)
+):
+    if current_user.user_type.lower() != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only owners can access this resource"
+        )
+
+    return current_user.id

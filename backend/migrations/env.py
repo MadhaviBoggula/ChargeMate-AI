@@ -6,6 +6,9 @@ from sqlalchemy import engine_from_config, pool
 
 from app.database.base import Base
 from app.database.session import engine
+from app.database.session import Base
+from app.models.user import User
+
 
 # Import the application's model package so its models
 # are registered with Base.metadata when they are added.

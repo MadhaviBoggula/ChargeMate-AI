@@ -184,3 +184,59 @@ def test_pending_without_action_routes_normally():
     assert result["pending_confirmation"] is not None
     assert result["route"] == "general"
     assert registry.invocations == []
+
+
+def test_proposal_result_gates_same_loop_confirm_attempt():
+    """A proposal produced this turn must block its confirm tool within
+    the same bounded tool loop (no pending existed at node entry)."""
+
+    registry = FakeToolRegistry(
+        tools=["prepare_booking", "confirm_booking"],
+        results={
+            "prepare_booking": {
+                "status": "ok",
+                "data": {"proposal_id": "prop-1"},
+                "confirmation_request": {
+                    "tool": "confirm_booking",
+                    "arguments": {"proposal_id": "prop-1"},
+                    "action": "book a slot",
+                    "summary": {},
+                },
+            },
+        },
+    )
+
+    graph, llm = build_graph(
+        chat_replies=["tool", "Please confirm in the app."],
+        registry=registry,
+        completions=[
+            build_completion(
+                tool_calls=[
+                    build_tool_call(
+                        "call_1",
+                        "prepare_booking",
+                        {"station_id": "st-1", "start_at": "10am"},
+                    ),
+                    build_tool_call(
+                        "call_2",
+                        "confirm_booking",
+                        {"proposal_id": "prop-1"},
+                    ),
+                ]
+            ),
+            build_completion(content="done"),
+        ],
+    )
+
+    result = run(graph, build_initial_state(role="driver"))
+
+    executed = [
+        invocation["name"]
+        for invocation in registry.invocations
+    ]
+
+    assert executed == ["prepare_booking"]
+    assert result["pending_confirmation"]["tool"] == "confirm_booking"
+    assert result["pending_confirmation"]["arguments"] == {
+        "proposal_id": "prop-1"
+    }

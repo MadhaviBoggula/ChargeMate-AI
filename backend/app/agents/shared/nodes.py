@@ -212,6 +212,11 @@ def create_nodes(
         results: list[dict[str, Any]] = []
         rounds = 0
 
+        # Proposal created during this node run (see contract below):
+        # once a domain tool returns a confirmation_request, the very
+        # same tool loop must not be able to execute its confirm tool.
+        new_proposal: dict[str, Any] | None = None
+
         while rounds < max_rounds:
             try:
                 completion = await llm.complete(messages, tools=schemas)
@@ -265,6 +270,10 @@ def create_nodes(
                     pending
                     and name == pending.get("tool")
                     and action is None
+                ) or (
+                    pending is None
+                    and new_proposal is not None
+                    and name == new_proposal.get("tool")
                 ):
                     result = {
                         "status": "confirmation_required",
@@ -291,6 +300,14 @@ def create_nodes(
                             ),
                         }
 
+                    if (
+                        isinstance(
+                            result.get("confirmation_request"), dict
+                        )
+                        and new_proposal is None
+                    ):
+                        new_proposal = result["confirmation_request"]
+
                 results.append({"tool": name, **result})
 
                 messages.append(
@@ -313,7 +330,22 @@ def create_nodes(
                 }
             )
 
-        return {"tool_results": results}
+        update: dict[str, Any] = {"tool_results": results}
+
+        # Proposal contract: a domain tool (e.g. prepare_booking) may
+        # return a ``confirmation_request`` payload describing the exact
+        # operation the user must explicitly approve. The graph relays it
+        # as pending confirmation; the LLM cannot create or alter it, and
+        # the chat API persists it as a confirmation_request message.
+        if not pending and new_proposal is not None:
+            update["pending_confirmation"] = {
+                "tool": new_proposal.get("tool"),
+                "arguments": new_proposal.get("arguments") or {},
+                "action": new_proposal.get("action", "operation"),
+                "summary": new_proposal.get("summary") or {},
+            }
+
+        return update
 
     async def rag_retrieval(state: GraphState) -> GraphState:
         """Retrieve knowledge chunks scoped to the user's role."""

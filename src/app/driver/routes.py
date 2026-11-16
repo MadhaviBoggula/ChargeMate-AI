@@ -39,7 +39,7 @@ router = APIRouter(
 def create_driver_api(
     driver: DriverCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin)
 ):
 
     return create_driver(
@@ -55,7 +55,7 @@ def create_driver_api(
 @router.get("/")
 def get_all_drivers_api(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin)
 ):
 
     return get_all_drivers(db)
@@ -69,7 +69,7 @@ def get_all_drivers_api(
 def get_driver_api(
     driver_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin)
 ):
 
     driver = get_driver(
@@ -111,7 +111,7 @@ def create_vehicle_api(
 def get_driver_details_api(
     driver_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin)
 ):
 
     driver = get_driver_with_vehicle(
@@ -136,7 +136,7 @@ def get_driver_details_api(
 def get_driver_vehicle_api(
     driver_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin)
 ):
 
     return get_driver_vehicles(
@@ -154,7 +154,7 @@ def update_driver_api(
     driver_id: int,
     driver: DriverUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin)
 ):
 
     result = update_driver(
@@ -180,7 +180,7 @@ def update_driver_api(
 def delete_driver_api(
     driver_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_admin)
 ):
 
     result = delete_driver(

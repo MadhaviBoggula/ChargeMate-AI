@@ -2,12 +2,12 @@ from sqlalchemy.orm import Session
 
 from app.auth.models import User
 from app.auth.schemas import UserCreate
+from app.driver.models import Driver
 
 
 # ---------------------------------
 # Create User
 # ---------------------------------
-
 def create_user(
     db: Session,
     user: UserCreate,
@@ -18,12 +18,24 @@ def create_user(
         full_name=user.full_name,
         email=user.email,
         password=hashed_password,
-        role=user.role
+        role=user.role.lower()
     )
 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Create Driver record if role is driver
+    if user.role.lower() == "driver":
+
+        driver = Driver(
+            full_name=user.full_name,
+            email=user.email,
+            phone=user.phone
+        )
+
+        db.add(driver)
+        db.commit()
 
     return new_user
 
@@ -31,7 +43,6 @@ def create_user(
 # ---------------------------------
 # Get User By Email
 # ---------------------------------
-
 def get_user_by_email(
     db: Session,
     email: str
@@ -47,7 +58,6 @@ def get_user_by_email(
 # ---------------------------------
 # Get User By ID
 # ---------------------------------
-
 def get_user_by_id(
     db: Session,
     user_id: int

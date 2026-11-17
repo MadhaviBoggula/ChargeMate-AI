@@ -8,6 +8,7 @@ from app.database.database import Base
 
 # Import all models here so Alembic can detect them
 from app.driver.models import *
+from app.stations.models import *
 from app.bookings.models import *
 from app.auth.models import *
 

@@ -7,8 +7,10 @@ from app.ai.services import (
     generate_demand_recommendations,
     generate_fault_recommendations,
     evaluate_demand_forecast,
-    evaluate_fault_detection
+    evaluate_fault_detection,
 )
+
+from app.recommendations.schemas import RecommendationResponse
 
 
 router = APIRouter(
@@ -17,18 +19,25 @@ router = APIRouter(
 )
 
 
-@router.post("/generate-demand-recommendations")
+@router.post(
+    "/generate-demand-recommendations",
+    response_model=list[RecommendationResponse]
+)
 def generate_demand(
     db: Session = Depends(get_db)
 ):
     return generate_demand_recommendations(db)
 
 
-@router.post("/generate-fault-recommendations")
+@router.post(
+    "/generate-fault-recommendations",
+    response_model=list[RecommendationResponse]
+)
 def generate_fault(
     db: Session = Depends(get_db)
 ):
     return generate_fault_recommendations(db)
+
 
 @router.post("/evaluate-demand")
 def evaluate_demand():

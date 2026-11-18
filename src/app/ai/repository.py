@@ -1,86 +1,60 @@
 from sqlalchemy.orm import Session
 
-from app.ai.models import DemandForecast
+from app.ai.models import DemandForecast, FaultDetection
+from app.ai.schemas import (
+    DemandForecastCreate,
+    FaultDetectionCreate,
+)
 
 
 # ---------------------------------
-# Create Demand Forecast
+# Demand Forecast Repository
 # ---------------------------------
 
-def create_forecast(
+def create_demand_forecast(
     db: Session,
-    forecast
+    forecast: DemandForecastCreate
 ):
-
     new_forecast = DemandForecast(
         station_id=forecast.station_id,
         forecast_date=forecast.forecast_date,
         predicted_demand=forecast.predicted_demand,
-        demand_level=forecast.demand_level
+        demand_level=forecast.demand_level,
     )
 
     db.add(new_forecast)
-
     db.commit()
-
     db.refresh(new_forecast)
 
     return new_forecast
 
 
-# ---------------------------------
-# Get All Demand Forecasts
-# ---------------------------------
-
-def get_all_forecasts(
-    db: Session
-):
-
-    return (
-        db.query(DemandForecast)
-        .all()
-    )
+def get_all_demand_forecasts(db: Session):
+    return db.query(DemandForecast).all()
 
 
 # ---------------------------------
-# Get Forecast By ID
+# Fault Detection Repository
 # ---------------------------------
 
-def get_forecast(
+def create_fault_detection(
     db: Session,
-    forecast_id: int
+    fault: FaultDetectionCreate
 ):
-
-    return (
-        db.query(DemandForecast)
-        .filter(
-            DemandForecast.id == forecast_id
-        )
-        .first()
+    new_fault = FaultDetection(
+        station_id=fault.station_id,
+        connector_id=fault.connector_id,
+        fault_type=fault.fault_type,
+        severity=fault.severity,
+        confidence=fault.confidence,
     )
 
+    db.add(new_fault)
+    db.commit()
+    db.refresh(new_fault)
 
-# ---------------------------------
-# Delete Forecast
-# ---------------------------------
+    return new_fault
 
-def delete_forecast(
-    db: Session,
-    forecast_id: int
-):
 
-    forecast = (
-        db.query(DemandForecast)
-        .filter(
-            DemandForecast.id == forecast_id
-        )
-        .first()
-    )
-
-    if forecast:
-
-        db.delete(forecast)
-
-        db.commit()
-
-    return forecast
+def get_all_fault_detections(db: Session):
+    return db.query(FaultDetection).all()

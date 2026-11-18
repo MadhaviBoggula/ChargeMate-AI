@@ -12,6 +12,7 @@ from app.stations.models import *
 from app.bookings.models import *
 from app.ai.models import *
 from app.simulation.models import *
+from app.recommendations.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

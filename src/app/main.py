@@ -4,6 +4,8 @@ from app.driver.routes import router as driver_router
 from app.stations.routes import router as station_router
 from app.bookings.routes import router as booking_router
 from app.auth.routes import router as auth_router
+from app.ai.routes import router as ai_router
+
 
 app = FastAPI(
     title="ChargeMate AI Backend"
@@ -22,3 +24,4 @@ app.include_router(driver_router)
 app.include_router(station_router)
 app.include_router(booking_router)
 app.include_router(auth_router)
+app.include_router(ai_router)

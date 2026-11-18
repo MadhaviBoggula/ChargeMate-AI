@@ -10,7 +10,7 @@ from app.database.database import Base
 from app.driver.models import *
 from app.stations.models import *
 from app.bookings.models import *
-from app.auth.models import *
+from app.ai.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

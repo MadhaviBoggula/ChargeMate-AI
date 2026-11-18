@@ -5,6 +5,7 @@ from app.stations.routes import router as station_router
 from app.bookings.routes import router as booking_router
 from app.auth.routes import router as auth_router
 from app.ai.routes import router as ai_router
+from app.simulation.routes import router as simulation_router
 
 
 app = FastAPI(
@@ -25,3 +26,4 @@ app.include_router(station_router)
 app.include_router(booking_router)
 app.include_router(auth_router)
 app.include_router(ai_router)
+app.include_router(simulation_router)

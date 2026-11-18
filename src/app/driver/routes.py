@@ -12,6 +12,7 @@ from app.driver.schemas import (
     DriverCreate,
     DriverUpdate,
     DriverVehicleCreate,
+     FavoriteStationCreate
 )
 
 from app.driver.repository import (
@@ -19,8 +20,11 @@ from app.driver.repository import (
     get_all_drivers,
     get_driver,
     create_vehicle,
+    create_favorite,
     get_driver_with_vehicle,
     get_driver_vehicles,
+    get_favorite_stations,
+    delete_favorite_station,
     update_driver,
     delete_driver,
 )
@@ -101,7 +105,63 @@ def create_vehicle_api(
         db,
         vehicle
     )
+# ---------------------------------
+# Add Favorite Station
+# ---------------------------------
 
+@router.post("/favorites")
+def create_favorite_api(
+    favorite: FavoriteStationCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_driver)
+):
+    return create_favorite(
+        db,
+        favorite
+    )
+
+
+# ---------------------------------
+# Get Favorite Stations
+# ---------------------------------
+
+@router.get("/{driver_id}/favorites")
+def get_favorite_stations_api(
+    driver_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_driver)
+):
+    return get_favorite_stations(
+        db,
+        driver_id
+    )
+
+
+# ---------------------------------
+# Delete Favorite Station
+# ---------------------------------
+
+@router.delete("/favorites/{favorite_id}")
+def delete_favorite_station_api(
+    favorite_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_driver)
+):
+
+    result = delete_favorite_station(
+        db,
+        favorite_id
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Favorite station not found"
+        )
+
+    return {
+        "message": "Favorite station deleted successfully"
+    }
 
 # ---------------------------------
 # Get Driver Details API

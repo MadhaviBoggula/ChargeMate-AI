@@ -263,3 +263,45 @@ def delete_driver(db, driver_id):
     db.commit()
 
     return driver
+
+# --------------------------
+# Get Driver Favorite Stations
+# --------------------------
+
+def get_favorite_stations(
+    db: Session,
+    driver_id: int
+):
+    return (
+        db.query(FavoriteStation)
+        .filter(
+            FavoriteStation.driver_id == driver_id
+        )
+        .all()
+    )
+
+
+# --------------------------
+# Delete Favorite Station
+# --------------------------
+
+def delete_favorite_station(
+    db: Session,
+    favorite_id: int
+):
+
+    favorite = (
+        db.query(FavoriteStation)
+        .filter(
+            FavoriteStation.id == favorite_id
+        )
+        .first()
+    )
+
+    if not favorite:
+        return None
+
+    db.delete(favorite)
+    db.commit()
+
+    return favorite

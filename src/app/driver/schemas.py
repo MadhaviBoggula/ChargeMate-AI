@@ -3,7 +3,28 @@ from datetime import datetime
 from typing import Optional, List
 
 
-# Vehicle Schema
+# ==========================
+# Favorite Station Schemas
+# ==========================
+
+class FavoriteStationCreate(BaseModel):
+    driver_id: int
+    station_id: int
+
+
+class FavoriteStationResponse(BaseModel):
+    id: int
+    driver_id: int
+    station_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================
+# Vehicle Schemas
+# ==========================
 
 class DriverVehicleCreate(BaseModel):
     driver_id: int
@@ -28,7 +49,9 @@ class VehicleResponse(BaseModel):
         from_attributes = True
 
 
-# Driver Schema
+# ==========================
+# Driver Schemas
+# ==========================
 
 class DriverCreate(BaseModel):
     full_name: str

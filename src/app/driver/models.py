@@ -140,6 +140,7 @@ class FavoriteStation(Base):
 
     station_id = Column(
         Integer,
+        ForeignKey("stations.id"),
         nullable=False
     )
 

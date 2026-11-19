@@ -1,0 +1,54 @@
+name: chargemate-ai
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: chargemate-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chargemate
+      POSTGRES_PASSWORD: chargemate
+      POSTGRES_DB: chargemate
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chargemate -d chargemate"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: ./backend
+    container_name: chargemate-migrate
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://chargemate:chargemate@db:5432/chargemate
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: chargemate-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://chargemate:chargemate@db:5432/chargemate
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  pgdata:

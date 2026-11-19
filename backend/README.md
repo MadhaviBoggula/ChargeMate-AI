@@ -129,6 +129,48 @@ uv run pytest tests/test_conversations_api.py -v
 
 Tests use an in-memory SQLite database and do not modify the Neon database.
 
+## Docker
+
+From the repository root, build and start the backend together with a local
+pgvector-enabled PostgreSQL database. Alembic migrations run automatically
+before the API starts.
+
+```bash
+docker compose up --build
+```
+
+- Backend: http://127.0.0.1:8000
+- API documentation: http://127.0.0.1:8000/docs
+- Health check: http://127.0.0.1:8000/health
+
+Compose reads `backend/.env` for application settings but overrides
+`DATABASE_URL` with the local `db` service. To use Neon instead, replace the
+`DATABASE_URL` values for the `migrate` and `backend` services in
+`docker-compose.yml` with your Neon connection string.
+
+`OPENAI_API_KEY` is required because the application settings validate it at
+import time. Export it before starting Compose, or add it to `backend/.env`.
+
+Build and run the backend image on its own:
+
+```bash
+docker build -t chargemate-backend ./backend
+docker run --rm -p 8000:8000 --env-file backend/.env \
+  -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" chargemate-backend
+```
+
+Stop the stack and keep the database volume:
+
+```bash
+docker compose down
+```
+
+Remove the database volume as well:
+
+```bash
+docker compose down -v
+```
+
 ## Member 1 Responsibilities
 
 - Backend foundation

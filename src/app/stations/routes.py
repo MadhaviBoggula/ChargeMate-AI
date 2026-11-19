@@ -34,9 +34,21 @@ router = APIRouter(
 def create_station_api(
     station: StationCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_admin)
+    current_user=Depends(get_current_operator)
 ):
-    return create_station(db, station)
+
+    result = create_station(
+        db,
+        station
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Station already exists"
+        )
+
+    return result
 
 
 # -----------------------------

@@ -10,7 +10,7 @@ def generate_demand_recommendations(
     forecasts = (
         db.query(DemandForecast)
         .filter(
-            DemandForecast.demand_level == "high"
+            DemandForecast.demand_level.ilike("high")
         )
         .all()
     )
@@ -42,7 +42,7 @@ def generate_fault_recommendations(
     faults = (
         db.query(FaultDetection)
         .filter(
-            FaultDetection.severity == "high"
+            FaultDetection.severity.ilike("high")
         )
         .all()
     )

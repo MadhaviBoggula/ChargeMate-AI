@@ -101,10 +101,24 @@ def create_vehicle_api(
     current_user=Depends(get_current_driver)
 ):
 
-    return create_vehicle(
+    result = create_vehicle(
         db,
         vehicle
     )
+
+    if result == "driver_not_found":
+        raise HTTPException(
+            status_code=404,
+            detail="Driver not found"
+        )
+
+    if result == "vehicle_exists":
+        raise HTTPException(
+            status_code=400,
+            detail="Vehicle number already exists"
+        )
+
+    return result
 # ---------------------------------
 # Add Favorite Station
 # ---------------------------------
@@ -115,12 +129,19 @@ def create_favorite_api(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_driver)
 ):
-    return create_favorite(
+
+    result = create_favorite(
         db,
         favorite
     )
 
+    if result is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Station already added to favorites"
+        )
 
+    return result
 # ---------------------------------
 # Get Favorite Stations
 # ---------------------------------

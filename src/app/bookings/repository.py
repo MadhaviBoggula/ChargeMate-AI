@@ -3,8 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.bookings.models import Booking
 from app.bookings.schemas import BookingCreate, BookingUpdate
+from app.stations.models import Station
 
-
+# ---------------------------------
+# Create Booking
+# ---------------------------------
 # ---------------------------------
 # Create Booking
 # ---------------------------------
@@ -14,6 +17,35 @@ def create_booking(
     booking,
     driver_id
 ):
+
+    # Check station exists
+    station = (
+        db.query(Station)
+        .filter(
+            Station.id == booking.station_id
+        )
+        .first()
+    )
+
+    if not station:
+        return "station_not_found"
+
+
+    # Check duplicate booking
+    existing_booking = (
+        db.query(Booking)
+        .filter(
+            Booking.driver_id == driver_id,
+            Booking.station_id == booking.station_id,
+            Booking.booking_time == booking.booking_time,
+            Booking.status != "Cancelled"
+        )
+        .first()
+    )
+
+    if existing_booking:
+        return "booking_exists"
+
 
     new_booking = Booking(
         driver_id=driver_id,
@@ -27,7 +59,6 @@ def create_booking(
     db.refresh(new_booking)
 
     return new_booking
-
 
 # ---------------------------------
 # Get Booking By ID

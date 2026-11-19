@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -77,10 +77,16 @@ def delete(
     current_user=Depends(get_current_admin),
 ):
 
-    delete_recommendation(
+    result = delete_recommendation(
         db,
         recommendation_id
     )
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Recommendation not found"
+        )
 
     return {
         "message": "Recommendation deleted successfully"

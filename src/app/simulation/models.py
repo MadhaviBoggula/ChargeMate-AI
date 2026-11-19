@@ -33,6 +33,12 @@ class Scenario(Base):
         nullable=False
     )
 
+    status = Column(
+        String(50),
+        nullable=False,
+        default="Created"
+    )
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()

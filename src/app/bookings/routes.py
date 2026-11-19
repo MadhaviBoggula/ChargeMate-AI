@@ -55,11 +55,25 @@ def create_booking_api(
             detail="Driver profile not found"
         )
 
-    return create_booking_service(
-        db,
-        booking,
-        driver.id
+    result = create_booking_service(
+    db,
+    booking,
+    driver.id
+)
+
+    if result == "station_not_found":
+        raise HTTPException(
+        status_code=404,
+        detail="Station not found"
     )
+
+    if result == "booking_exists":
+        raise HTTPException(
+        status_code=400,
+        detail="Booking already exists for this time"
+    )
+
+    return result
 
 # ---------------------------------
 # Get All Bookings - Admin / Operator

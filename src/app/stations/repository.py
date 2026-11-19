@@ -4,7 +4,23 @@ from app.stations.models import Station
 from app.stations.schemas import StationCreate, StationUpdate
 
 
-def create_station(db: Session, station: StationCreate):
+def create_station(
+    db: Session,
+    station: StationCreate
+):
+
+    existing_station = (
+        db.query(Station)
+        .filter(
+            Station.station_name == station.station_name,
+            Station.location == station.location
+        )
+        .first()
+    )
+
+    if existing_station:
+        return None
+
 
     new_station = Station(
         station_name=station.station_name,

@@ -1,9 +1,19 @@
+import os
+from uuid import UUID
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from app.config import settings
 from app.database import SessionLocal
 from app.services.owner_service import list_stations, get_station, list_chargers, set_charger_status
 
 mcp = FastMCP("chargemate-owner-tools")
+
+load_dotenv()
+owner_id_value = os.getenv("OWNER_ID")
+if not owner_id_value:
+    raise RuntimeError("OWNER_ID environment variable is missing")
+
+OWNER_ID = UUID(owner_id_value)
 
 @mcp.tool()
 def list_my_stations() -> list[dict]:
@@ -40,14 +50,14 @@ def list_my_chargers() -> list[dict]:
              "status": c.status, "availability": c.availability,
              "charging_type": c.charging_type, "power_kw": str(c.power_kw),
              "price_per_kwh": str(c.price_per_kwh)}
-            for c in list_chargers(db, settings.mcp_owner_id)
+            for c in list_chargers(db, OWNER_ID)
         ]
 
 @mcp.tool()
 def update_charger_status(charger_id: int, status: str) -> dict:
     """Update status of a charger owned by the configured owner."""
     with SessionLocal() as db:
-        c = set_charger_status(db, settings.mcp_owner_id, charger_id, status)
+        c = set_charger_status(db, OWNER_ID, charger_id, status)
         if not c:
             return {"error": "Charger not found"}
         return {"id": c.id, "charger_code": c.charger_code, "status": c.status}

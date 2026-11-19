@@ -1,20 +1,28 @@
-import anthropic
-
+from anthropic import Anthropic
+from groq import AsyncGroq
 from app.config import settings
 
-client = anthropic.Anthropic(
-    api_key=settings.anthropic_api_key
-)
+api_key = settings.groq_api_key.strip()
+
+if not api_key:
+    raise RuntimeError(
+        "GROQ_API_KEY is missing. "
+        "Check your backend/.env file."
+    )
+
+client = Anthropic(api_key=api_key)
 
 response = client.messages.create(
     model=settings.anthropic_model,
-    max_tokens=1000,
+    max_tokens=1024,
     messages=[
         {
             "role": "user",
-            "content": "Show me my charging station details."
+            "content": "Hello, introduce yourself as ChargeMate AI Owner Assistant."
         }
     ]
 )
 
-print(response.content[0].text)
+for block in response.content:
+    if block.type == "text":
+        print(block.text)

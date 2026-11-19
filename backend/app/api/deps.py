@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.services.token import decode_access_token
 
 
@@ -48,13 +48,20 @@ def get_current_user(
 
     return user
 
+
 def get_owner_id(
-    current_user=Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    if current_user.user_type.lower() != "owner":
+    role = current_user.role
+
+    role_value = (
+        role.value if hasattr(role, "value") else role
+    )
+
+    if not isinstance(role_value, str) or role_value.lower() != "owner":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only owners can access this resource"
+            detail="Only owners can access this resource",
         )
 
     return current_user.id

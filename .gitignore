@@ -8,6 +8,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.pyc
 
 # Virtual environments
 .venv/
@@ -30,5 +31,12 @@ dist/
 
 # Logs
 *.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project documents
 ChargeMate_AI_Backend_Team_Task_Allocation.docx
 ChargeMate_AI_Product_Overview_and_Technical_Brief_v1.1.md
+frontend/

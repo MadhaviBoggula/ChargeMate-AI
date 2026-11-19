@@ -1,3 +1,4 @@
+
 from app.models.user import User, UserRole
 
 from app.models.conversation import (
@@ -6,8 +7,9 @@ from app.models.conversation import (
     MessageRole,
 )
 
-from app.models.station import Station
-
+from app.models.address import Address
+from app.models.station import ChargingStation
+from app.models.charger import Charger
 
 __all__ = [
     "User",
@@ -15,5 +17,7 @@ __all__ = [
     "Conversation",
     "Message",
     "MessageRole",
-    "Station",
+    "Address",
+    "ChargingStation",
+    "Charger",
 ]

@@ -14,14 +14,13 @@ from app.api.routes.chat import router as chat_router
 from app.api.routes.conversations import (
     router as conversations_router,
 )
-from app.api.routes.stations import router as stations_router
+from app.routers.station import router as station_router
 from app.core.config import settings
 from app.database.session import engine
 from app.mcp.client import close_mcp_connections
 
 from app.routers.addresses import router as addresses_router
 from app.routers.owner import router as owner_router
-
 
 # Structured JSON logging
 class JSONFormatter(logging.Formatter):
@@ -118,12 +117,9 @@ app.include_router(
 
 
 # Charging station API routes
-app.include_router(
-    stations_router,
-    prefix=f"{settings.api_v1_prefix}/stations",
-    tags=["Charging Stations"],
-)
 
+
+app.include_router(station_router)
 app.include_router(addresses_router)
 app.include_router(owner_router)
 
@@ -159,3 +155,4 @@ def readiness_check():
                 "database": "unavailable",
             },
         )
+    

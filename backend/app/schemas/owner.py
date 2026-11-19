@@ -1,29 +1,69 @@
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from uuid import UUID
 
 class StationCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=150)
     address_id: int
-    description: str | None = None
+    name: str = Field(min_length=1, max_length=255)
+    connectors: list[str] | None = None
+    charger_type: str | None = Field(default=None, max_length=2)
+    power: float = Field(gt=0)
+    speed: str | None = None
+    available_slots: int = Field(ge=0)
+    total_slots: int = Field(ge=0)
+    price_per_kwh: float = Field(ge=0)
+    description: str = ""
+    is_active: bool = True
+
+    @model_validator(mode="after")
+    def validate_slots(self):
+        if self.available_slots > self.total_slots:
+            raise ValueError(
+                "available_slots cannot exceed total_slots"
+            )
+        return self
+
 
 class StationUpdate(BaseModel):
-    name: str | None = Field(default=None, max_length=150)
     address_id: int | None = None
+    name: str | None = None
+    connectors: list[str] | None = None
+    charger_type: str | None = None
+    power: float | None = Field(default=None, gt=0)
+    speed: str | None = None
+    available_slots: int | None = Field(default=None, ge=0)
+    total_slots: int | None = Field(default=None, ge=0)
+    price_per_kwh: float | None = Field(default=None, ge=0)
     description: str | None = None
+    is_active: bool | None = None
+
 
 class StationOut(BaseModel):
-    id: int
-    owner_id: int
-    name: str
-    address_id: int
-    description: str | None
-    created_at: datetime
-    updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+    id: UUID
+    address_id: int | None
+    owner_id: UUID | None
+    name: str
+    location: str | None
+    address: str | None
+    connectors: list[str] | None
+    charger_type: str | None
+    power: float
+    speed: str | None
+    available_slots: int
+    total_slots: int
+    price_per_kwh: float
+    description: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
 class ChargerCreate(BaseModel):
-    station_id: int
+    station_id: UUID
     charger_code: str = Field(min_length=1, max_length=80)
     connector_type: str = Field(min_length=1, max_length=50)
     charging_type: str
@@ -64,7 +104,7 @@ class ChargerUpdate(BaseModel):
 
 class ChargerOut(BaseModel):
     id: int
-    station_id: int
+    station_id: UUID
     charger_code: str
     connector_type: str
     charging_type: str

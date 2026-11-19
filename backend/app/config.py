@@ -1,18 +1,20 @@
-from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 class Settings(BaseSettings):
-    database_url: str
-    mcp_owner_id: int = 1
-    openai_api_key: str
+    ai_provider: str = "groq"
+
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.3-70b-versatile"
+
+    openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"
 
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-sonnet-4-5"
+
     model_config = SettingsConfigDict(
-        env_file=BASE_DIR / ".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=".env",
+        extra="ignore",
     )
 
 settings = Settings()

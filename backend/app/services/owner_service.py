@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models.station import Station
+from app.models.station import ChargingStation as Station
 from app.models.charger import Charger
 
 def list_stations(db: Session, owner_id: int):

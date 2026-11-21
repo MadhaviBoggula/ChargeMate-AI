@@ -45,6 +45,38 @@ PENDING_BOOKING = {
 }
 
 
+def test_normal_tool_loop_is_never_approved():
+    registry = FakeToolRegistry(tools=["get_my_bookings"])
+    graph, _ = build_graph(
+        chat_replies=["tool", "Here are your bookings."],
+        registry=registry,
+        completions=[
+            build_completion(
+                tool_calls=[
+                    build_tool_call(
+                        "call_1",
+                        "get_my_bookings",
+                        {},
+                    )
+                ]
+            ),
+            build_completion(content="loop done"),
+        ],
+    )
+
+    state = build_initial_state(
+        role="driver",
+        current_request="Show my bookings",
+        pending_confirmation=None,
+        confirmation_action=None,
+    )
+
+    run(graph, state)
+
+    assert len(registry.invocations) == 1
+    assert registry.invocations[0]["context"]["approved"] is False
+
+
 def test_pending_confirmation_awaits_explicit_user_action():
     registry = FakeToolRegistry(tools=["confirm_booking"])
     graph, llm = build_graph(
@@ -105,6 +137,7 @@ def test_explicit_confirm_executes_registered_tool_directly():
     assert registry.invocations[0]["name"] == "confirm_booking"
     assert registry.invocations[0]["arguments"] == {"proposal_id": "prop-123"}
     assert registry.invocations[0]["context"]["user_id"] == state["user_id"]
+    assert registry.invocations[0]["context"]["approved"] is True
 
     assert result["pending_confirmation"] is None
     assert result["route"] == "respond"

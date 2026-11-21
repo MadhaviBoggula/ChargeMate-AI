@@ -1,0 +1,31 @@
+Pricing Policy and Charger Technical Specifications
+
+Tariff structure:
+Price charging per kilowatt-hour (kWh) delivered. AC chargers usually carry a
+lower per-kWh rate than DC fast chargers because they deliver less power and
+cost less to operate. Keep one clear price per charger and display it
+consistently in the app and on site.
+
+Changing prices:
+Price changes apply to future sessions only; never retroactively change the
+price recorded on a completed session. Announce planned price changes to
+drivers before they take effect. When running a promotional rate, record the
+start and end time so revenue reports remain explainable.
+
+Revenue reporting:
+Revenue equals delivered energy multiplied by the session price per kWh.
+Reports in this system are derived from completed charging sessions, not from
+bookings. A cancelled or expired booking contributes no revenue.
+
+Charger specifications:
+AC chargers typically deliver 7 to 22 kW and suit overnight or workplace
+charging. DC fast chargers typically deliver 50 to 150 kW and suit short
+stops on long journeys. Connector power ratings must not exceed the charger's
+rated output. CCS2 is the common DC connector; Type 2 is the common AC
+connector; CHAdeMO appears on some older vehicles.
+
+Capacity planning:
+Estimate site capacity from the number of chargers, their rated power, and
+the available electrical supply. Never add a charger that exceeds the site's
+approved supply. If several DC chargers share a supply, use load management
+so simultaneous sessions do not trip the main breaker.

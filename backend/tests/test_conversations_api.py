@@ -1,5 +1,6 @@
+from uuid import UUID
 
-from uuid import uuid4
+from app.models.conversation import Message, MessageRole
 
 
 def register_and_login(client, email):
@@ -79,7 +80,48 @@ def test_list_conversations(client):
     assert len(response.json()) == 2
 
 
-def test_save_message(client):
+def test_retrieve_conversation_history(client, db_session):
+    token = register_and_login(
+        client,
+        "conversation4@example.com",
+    )
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    conversation = client.post(
+        "/api/v1/conversations",
+        headers=headers,
+        json={"title": "Charging Assistance"},
+    )
+
+    conversation_id = conversation.json()["id"]
+
+    db_session.add(
+        Message(
+            conversation_id=UUID(conversation_id),
+            role=MessageRole.USER,
+            content="Hello, ChargeMate!",
+        )
+    )
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/conversations/{conversation_id}",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["title"] == "Charging Assistance"
+    assert len(data["messages"]) == 1
+    assert data["messages"][0]["content"] == "Hello, ChargeMate!"
+
+
+def test_message_writer_route_is_removed(client):
+    """Chat is the only writer of conversation messages."""
+
     token = register_and_login(
         client,
         "conversation3@example.com",
@@ -105,52 +147,7 @@ def test_save_message(client):
         },
     )
 
-    assert response.status_code == 201
-
-    data = response.json()
-
-    assert data["content"] == "Find nearby charging stations."
-    assert data["role"] == "user"
-    assert data["conversation_id"] == conversation_id
-
-
-def test_retrieve_conversation_history(client):
-    token = register_and_login(
-        client,
-        "conversation4@example.com",
-    )
-
-    headers = {"Authorization": f"Bearer {token}"}
-
-    conversation = client.post(
-        "/api/v1/conversations",
-        headers=headers,
-        json={"title": "Charging Assistance"},
-    )
-
-    conversation_id = conversation.json()["id"]
-
-    client.post(
-        f"/api/v1/conversations/{conversation_id}/messages",
-        headers=headers,
-        json={
-            "role": "user",
-            "content": "Hello, ChargeMate!",
-        },
-    )
-
-    response = client.get(
-        f"/api/v1/conversations/{conversation_id}",
-        headers=headers,
-    )
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["title"] == "Charging Assistance"
-    assert len(data["messages"]) == 1
-    assert data["messages"][0]["content"] == "Hello, ChargeMate!"
+    assert response.status_code in {404, 405}
 
 
 def test_user_cannot_access_another_users_conversation(client):
@@ -164,13 +161,9 @@ def test_user_cannot_access_another_users_conversation(client):
         "owner2@example.com",
     )
 
-    first_headers = {
-        "Authorization": f"Bearer {first_token}"
-    }
+    first_headers = {"Authorization": f"Bearer {first_token}"}
 
-    second_headers = {
-        "Authorization": f"Bearer {second_token}"
-    }
+    second_headers = {"Authorization": f"Bearer {second_token}"}
 
     conversation = client.post(
         "/api/v1/conversations",
@@ -183,45 +176,6 @@ def test_user_cannot_access_another_users_conversation(client):
     response = client.get(
         f"/api/v1/conversations/{conversation_id}",
         headers=second_headers,
-    )
-
-    assert response.status_code == 404
-
-
-def test_user_cannot_add_message_to_another_users_conversation(client):
-    first_token = register_and_login(
-        client,
-        "owner3@example.com",
-    )
-
-    second_token = register_and_login(
-        client,
-        "owner4@example.com",
-    )
-
-    first_headers = {
-        "Authorization": f"Bearer {first_token}"
-    }
-
-    second_headers = {
-        "Authorization": f"Bearer {second_token}"
-    }
-
-    conversation = client.post(
-        "/api/v1/conversations",
-        headers=first_headers,
-        json={"title": "Private Conversation"},
-    )
-
-    conversation_id = conversation.json()["id"]
-
-    response = client.post(
-        f"/api/v1/conversations/{conversation_id}/messages",
-        headers=second_headers,
-        json={
-            "role": "user",
-            "content": "Unauthorized message",
-        },
     )
 
     assert response.status_code == 404

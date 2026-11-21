@@ -1,0 +1,31 @@
+Connectors and Vehicle Compatibility
+
+Common connector types:
+Type 2 is the standard AC connector used across most of Europe and India for
+public and home AC charging. CCS2 (Combined Charging System 2) adds two DC
+pins below the Type 2 shape and is the dominant DC fast-charging connector.
+CHAdeMO is an older DC standard used by some Japanese vehicles. Type 1 is a
+single-phase AC connector used mainly in North America and Japan. Tesla
+vehicles use a proprietary connector in some markets and CCS2 elsewhere.
+
+AC and DC connectors are not interchangeable:
+An AC Type 2 connector cannot deliver DC fast charging, and a CCS2 DC
+connector will not charge a vehicle that only supports AC Type 2. Always
+match the connector your vehicle supports with the connector listed on the
+charger.
+
+Checking compatibility:
+Find your vehicle's connector type in the vehicle manual or the charging port
+label. In this application, register your vehicle with its connector type and
+use the compatibility filter to see only stations whose active chargers
+support that connector.
+
+Adapters:
+Some adapters convert between connector families, but not all adapters carry
+DC power and some are unsafe for high-power charging. Use only manufacturer
+approved adapters and never force a connector that does not fit smoothly.
+
+Booking a compatible charger:
+When preparing a booking, the application checks your vehicle's connector
+against the selected charger. If they do not match, choose a different
+charger or update your vehicle details first.

@@ -1,84 +1,77 @@
-# ChargeMate AI Backend
+# ChargeMate AI
 
-## Overview
+AI-powered EV charging assistant with two role-specific experiences:
 
-ChargeMate AI is an AI-powered EV charging station management backend built with FastAPI, SQLAlchemy, Alembic, and PostgreSQL.
+- **Station owners** retrieve stations, chargers, sessions, revenue, and
+  analytics, and manage their own charging network.
+- **EV drivers** discover compatible stations, manage vehicles, preferences,
+  and favourites, search available 30-minute slots, and book or cancel
+  simulated charging reservations.
 
-The system provides EV driver management, charging simulation, AI-based demand forecasting, fault detection, and automated recommendations.
+Both roles talk to a LangGraph assistant that routes between domain knowledge
+(RAG over pgvector), database-backed MCP tools, and ordinary answers.
+Sensitive operations require an explicit, server-side confirmation.
 
----
+The complete backend lives in [`backend/`](backend/README.md), including the
+API reference, MCP tool inventory, booking rules, setup, and testing
+instructions.
 
-## Tech Stack
+## Architecture
 
-- FastAPI
-- Python
-- SQLAlchemy ORM
-- Alembic migrations
-- PostgreSQL (Neon Database)
-- Pydantic
-- Uvicorn
-- Scikit-learn (AI evaluation metrics)
+```text
+React / API clients
+        │ JWT
+        ▼
+FastAPI (auth, chat, owner, driver, bookings)
+        │
+        ├── LangGraph owner/driver workflows ── RAG (pgvector, role-scoped)
+        │                                      └── LLM via OpenRouter
+        │
+        └── MCP client ── owner MCP server (9 tools)
+                       └─ driver MCP server (15 tools)
+                              │
+                              ▼
+                    PostgreSQL + pgvector
+```
 
----
+## Quick start (backend only)
 
-## Project Modules
+```bash
+cd backend
+uv sync
+cp .env.example .env          # set DATABASE_URL, JWT_SECRET_KEY, OPENROUTER_*
+alembic upgrade head
+python scripts/seed_stations.py
+python scripts/ingest_docs.py
+uvicorn app.main:app --reload
+```
 
-### Authentication
+- API docs: http://127.0.0.1:8000/docs
+- Health: http://127.0.0.1:8000/health
+- Demo owner: `owner@chargemate.test / OwnerPass123!`
+- Demo driver: `driver@chargemate.test / DriverPass123!`
 
-- User login
-- Token-based authentication
-- Role-based access control
+## Docker
 
-### Driver Management
+```bash
+docker compose up --build
+```
 
-- Create driver
-- View drivers
-- Update driver
-- Delete driver
-- Vehicle management
-- Favorite charging stations
+This starts PostgreSQL with pgvector, runs migrations, launches the owner and
+driver MCP servers, and serves the API on port 8000.
 
-### Simulation Management
+## Tests
 
-- Create simulation scenarios
-- Store initial and current states
-- Manage charging scenarios
+```bash
+cd backend
+pytest -v
+```
 
-### AI Module
+The default suite uses isolated SQLite; PostgreSQL integration and booking
+concurrency tests run when `TEST_DATABASE_URL` is set. See
+[`backend/README.md`](backend/README.md) for details.
 
-#### Demand Forecasting
+## Repository layout
 
-Features:
-- Predicted demand calculation
-- Demand level classification
-- Evaluation metrics:
-  - MAE
-  - RMSE
-
-#### Fault Detection
-
-Features:
-- Fault type detection
-- Severity classification
-- Confidence scoring
-- Evaluation metrics:
-  - Precision
-  - Recall
-  - F1 Score
-  - False positives
-
-### AI Recommendations
-
-Automatically generates recommendations:
-
-- High demand:
-  - Load balancing suggestions
-
-- High severity fault:
-  - Maintenance alerts
-
----
-
-## API Documentation
-
-Swagger UI:
+- `backend/` — canonical application, migrations, seed knowledge, tests.
+- `src/` — historical reference code, not imported by the backend.

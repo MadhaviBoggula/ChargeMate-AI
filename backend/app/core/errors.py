@@ -18,6 +18,27 @@ class ValidationError(AppError):
     error_code = "validation_error"
 
 
+class NotFoundError(AppError):
+    """Raised when an owned resource does not exist."""
+
+    status_code = 404
+    error_code = "not_found"
+
+
+class ConflictError(AppError):
+    """Raised when a request conflicts with existing state."""
+
+    status_code = 409
+    error_code = "conflict"
+
+
+class ForbiddenError(AppError):
+    """Raised when an authenticated user cannot access a resource."""
+
+    status_code = 403
+    error_code = "forbidden"
+
+
 class UpstreamProviderError(AppError):
     """Raised when an external provider (LLM, embeddings) fails."""
 

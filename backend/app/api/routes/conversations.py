@@ -1,5 +1,4 @@
 
-from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,14 +7,12 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
 from app.database.session import get_db
-from app.models.conversation import Conversation, Message
+from app.models.conversation import Conversation
 from app.models.user import User
 from app.schemas.conversation import (
     ConversationCreate,
     ConversationDetailResponse,
     ConversationResponse,
-    MessageCreate,
-    MessageResponse,
 )
 
 
@@ -96,44 +93,6 @@ def get_conversation(
     return conversation
 
 
-@router.post(
-    "/{conversation_id}/messages",
-    response_model=MessageResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_message(
-    conversation_id: UUID,
-    message_data: MessageCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Save a message in a conversation owned by the user."""
-
-    conversation = db.scalar(
-        select(Conversation).where(
-            Conversation.id == conversation_id,
-            Conversation.user_id == current_user.id,
-        )
-    )
-
-    if conversation is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Conversation not found.",
-        )
-
-    message = Message(
-        conversation_id=conversation.id,
-        role=message_data.role,
-        content=message_data.content,
-        message_type=message_data.message_type,
-        metadata_json=message_data.metadata_json,
-    )
-
-    conversation.updated_at = datetime.now(timezone.utc)
-
-    db.add(message)
-    db.commit()
-    db.refresh(message)
-
-    return message
+# Messages are written only by the chat workflow. The public message
+# endpoint was removed so clients cannot forge assistant confirmations,
+# system messages, or tool metadata.

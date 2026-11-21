@@ -29,6 +29,13 @@ dist/
 .vscode/
 .idea/
 
+tests-2/
+FRONTEND_IMPLEMENTATION_PLAN.md
+FRONTEND_TEAM_TASK_ALLOCATION.md
+backend/docs
+
+src/
+
 # Logs
 *.log
 

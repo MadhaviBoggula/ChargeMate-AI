@@ -1,102 +1,95 @@
+from __future__ import annotations
+
+import uuid
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Float,
-    Integer,
     ForeignKey,
-    JSON,
     String,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import BaseModel
-from uuid import UUID
-from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
 
 class ChargingStation(BaseModel):
+    """A charging station owned by one authenticated owner."""
+
     __tablename__ = "stations"
 
     __table_args__ = (
         CheckConstraint(
-            "power > 0",
-            name="station_power_positive",
+            "latitude IS NULL OR (latitude >= -90 AND latitude <= 90)",
+            name="station_latitude_range",
         ),
         CheckConstraint(
-            "available_slots >= 0",
-            name="station_available_slots_nonnegative",
-        ),
-        CheckConstraint(
-            "total_slots >= 0",
-            name="station_total_slots_nonnegative",
-        ),
-        CheckConstraint(
-            "available_slots <= total_slots",
-            name="station_available_not_above_total",
-        ),
-        CheckConstraint(
-            "price_per_kwh >= 0",
-            name="station_price_nonnegative",
+            "longitude IS NULL OR (longitude >= -180 AND longitude <= 180)",
+            name="station_longitude_range",
         ),
     )
 
-    # Nullable initially to preserve existing station records.
-    address_id: Mapped[int | None] = mapped_column(
-        Integer,
-        ForeignKey("addresses.id"),
-        nullable=True,
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
         index=True,
     )
-    owner_id: Mapped[UUID | None] = mapped_column(
-    PG_UUID(as_uuid=True),
-    ForeignKey("users.id"),
-    nullable=True,
-    index=True,
-    )
+
     name: Mapped[str] = mapped_column(
-        String(255), nullable=False
+        String(255),
+        nullable=False,
+        index=True,
     )
 
-    location: Mapped[str] = mapped_column(
-        String(255), nullable=True
+    description: Mapped[str | None] = mapped_column(
+        String(1000),
+        nullable=True,
     )
 
-    # Preserve existing textual address.
-    address: Mapped[str] = mapped_column(
-        String(500), nullable=True
+    address_line1: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
 
-    connectors: Mapped[list[str]] = mapped_column(
-        JSON, nullable=True
+    address_line2: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
 
-    charger_type: Mapped[str] = mapped_column(
-        String(2), nullable=True
+    city: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        index=True,
     )
 
-    power: Mapped[float] = mapped_column(
-        Float, nullable=False
+    state: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
     )
 
-    speed: Mapped[str] = mapped_column(
-        String(20), nullable=True
+    pincode: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+        index=True,
     )
 
-    available_slots: Mapped[int] = mapped_column(
-        nullable=False
+    latitude: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
     )
 
-    total_slots: Mapped[int] = mapped_column(
-        nullable=True
+    longitude: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
     )
 
-    price_per_kwh: Mapped[float] = mapped_column(
-        Float, nullable=True
-    )
-
-    description: Mapped[str] = mapped_column(
-        String(1000), nullable=False
+    timezone: Mapped[str] = mapped_column(
+        String(64),
+        default="Asia/Kolkata",
+        server_default="Asia/Kolkata",
+        nullable=False,
     )
 
     is_active: Mapped[bool] = mapped_column(
@@ -104,14 +97,49 @@ class ChargingStation(BaseModel):
         default=True,
         server_default="true",
         nullable=False,
+        index=True,
     )
 
-    address_record: Mapped["Address | None"] = relationship(
-        "Address",
-        back_populates="stations",
-    )
+    owner: Mapped["User"] = relationship("User")
 
     chargers: Mapped[list["Charger"]] = relationship(
         "Charger",
         back_populates="station",
+        cascade="all, delete-orphan",
+        order_by="Charger.charger_code",
     )
+
+    @property
+    def connector_types(self) -> list[str]:
+        return sorted(
+            {
+                connector.connector_type
+                for charger in self.chargers
+                for connector in charger.connectors
+            }
+        )
+
+    @property
+    def min_price_per_kwh(self) -> Decimal | None:
+        if not self.chargers:
+            return None
+        return min(charger.price_per_kwh for charger in self.chargers)
+
+    @property
+    def max_power_kw(self) -> Decimal | None:
+        if not self.chargers:
+            return None
+        return max(charger.power_kw for charger in self.chargers)
+
+    @property
+    def total_chargers(self) -> int:
+        return len(self.chargers)
+
+    @property
+    def available_chargers(self) -> int:
+        return sum(
+            1
+            for charger in self.chargers
+            if charger.status == "active"
+            and charger.availability == "available"
+        )

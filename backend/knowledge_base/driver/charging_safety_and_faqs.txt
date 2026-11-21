@@ -1,0 +1,39 @@
+Charging Safety and Frequently Asked Questions
+
+Safety around chargers:
+Park with the charger cable able to reach without stretching. Inspect the
+connector for damage, water, or debris before plugging in; never use a
+connector with bent pins or exposed conductors. Do not charge during a
+lightning storm if the site is unsheltered. Keep the charging bay clear and
+do not leave children unattended near cables.
+
+Can I charge in the rain?
+Yes. Public connectors and vehicle inlets are designed to be safe in wet
+weather. Make sure the connector is fully seated and never use household
+extension leads outdoors.
+
+Why does charging slow down?
+Most vehicles taper charging power above 80% state of charge to protect the
+battery. Very cold or very hot batteries also charge more slowly. Precondition
+the battery before a DC fast-charging stop in cold weather.
+
+How long will a booking hold my charger?
+A booking is a simulated reservation for a fixed time window. It does not
+lock the physical charger or start a session. Arrive at the start time and
+use the station as normal.
+
+Can I cancel a booking?
+Yes, an upcoming booking can be cancelled before the cancellation cutoff,
+which is 30 minutes before the start time. Later cancellations are refused
+so the slot stays predictable for other drivers.
+
+What if the charger is unavailable when I arrive?
+Check the station availability in the app and look for another compatible
+charger at the same station. If the charger is faulty, report it so the
+owner can take it out of service.
+
+Battery care:
+For daily driving, keep the battery between about 20% and 80%. Charge to
+100% only when you need the full range. Avoid leaving the battery empty for
+long periods and avoid frequent maximum-power DC sessions when AC charging
+would do.

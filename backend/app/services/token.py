@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 import jwt
 from jwt import InvalidTokenError
@@ -16,9 +17,10 @@ def get_jwt_secret() -> str:
 
 def create_access_token(
     subject: str,
+    role: str,
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Create a signed JWT access token."""
+    """Create a signed JWT access token with identity and role claims."""
 
     now = datetime.now(timezone.utc)
 
@@ -29,8 +31,10 @@ def create_access_token(
 
     payload = {
         "sub": subject,
+        "role": role,
         "iat": now,
         "exp": now + expires_delta,
+        "jti": uuid4().hex,
     }
 
     return jwt.encode(
@@ -55,5 +59,5 @@ def decode_access_token(token: str) -> dict | None:
 
         return payload
 
-    except InvalidTokenError:
+    except (InvalidTokenError, RuntimeError):
         return None

@@ -6,11 +6,6 @@ from sqlalchemy import engine_from_config, pool
 
 from app.database.base import Base
 from app.database.session import engine
-#from app.database.session import Base
-from app.models.user import User
-from app.models.address import Address
-from app.models.station import ChargingStation
-from app.models.charger import Charger
 
 
 # Import the application's model package so its models

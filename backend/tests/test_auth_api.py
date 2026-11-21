@@ -94,6 +94,29 @@ def test_profile_requires_authentication(client):
     assert response.status_code == 401
 
 
+def test_demo_test_domain_can_register_and_login(client):
+    credentials = {
+        "email": "demo.owner@chargemate.test",
+        "password": "TestPassword123",
+    }
+
+    registration = client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Demo Owner",
+            **credentials,
+            "role": "owner",
+        },
+    )
+
+    assert registration.status_code == 201
+
+    login = client.post("/api/v1/auth/login", json=credentials)
+
+    assert login.status_code == 200
+    assert "access_token" in login.json()
+
+
 def test_authenticated_user_can_view_profile(client):
     client.post(
         "/api/v1/auth/register",

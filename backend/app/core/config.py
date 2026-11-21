@@ -37,6 +37,12 @@ class Settings(BaseSettings):
 
     mcp_owner_server_url: str | None = None
     mcp_driver_server_url: str | None = None
+    mcp_transport: str = "stdio"
+    mcp_owner_host: str = "127.0.0.1"
+    mcp_owner_port: int = 8101
+    mcp_driver_host: str = "127.0.0.1"
+    mcp_driver_port: int = 8102
+    mcp_proposal_ttl_minutes: int = 15
 
     embedding_provider: str | None = None
     embedding_model: str | None = None

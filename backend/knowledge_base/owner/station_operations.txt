@@ -1,0 +1,30 @@
+Station Operations Guidelines
+
+Opening and daily checks:
+At the start of each operating day, confirm every charger reports a healthy
+heartbeat, the payment-free session flow completes, and the charging bay is
+clear of obstructions. Record any charger that reports a fault and mark it
+unavailable in the network dashboard before drivers arrive.
+
+Uptime and utilization:
+Track uptime as the share of scheduled hours a charger is available for
+sessions. Utilization is the share of available hours that are actually
+booked or charging. A charger below 10% utilization may need better signage
+or a revised tariff; a charger above 80% utilization may justify adding a
+second unit at the site.
+
+Session review:
+Review completed sessions daily for abnormal energy delivery, sessions that
+end immediately, and repeated authentication failures. High failure rates at
+one charger usually indicate a connector, cable, or network problem rather
+than a driver error.
+
+Driver communications:
+Keep station notes current with access instructions, parking rules, and any
+planned maintenance windows. When a station will be closed, deactivate it in
+the system so it does not appear in discovery or accept new bookings.
+
+Escalation:
+Log every incident with time, charger, symptom, and action taken. Escalate
+electrical faults, burning smells, or damaged connectors to a qualified
+technician immediately and lock the charger out of service until inspected.

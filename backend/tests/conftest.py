@@ -1,4 +1,3 @@
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -8,19 +7,19 @@ from sqlalchemy.pool import StaticPool
 from app.api.deps import get_db
 from app.database.base import Base
 from app.main import app
-from app.models import User, Conversation, Message
 
 
 @pytest.fixture
-def client():
-    # Use a separate in-memory SQLite database for tests.
+def session_factory():
+    """Create an isolated in-memory database and session factory."""
+
     test_engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
 
-    TestingSessionLocal = sessionmaker(
+    factory = sessionmaker(
         bind=test_engine,
         autoflush=False,
         autocommit=False,
@@ -29,12 +28,35 @@ def client():
 
     Base.metadata.create_all(bind=test_engine)
 
+    try:
+        yield factory
+    finally:
+        Base.metadata.drop_all(bind=test_engine)
+        test_engine.dispose()
+
+
+@pytest.fixture
+def db_session(session_factory):
+    """Provide a session for direct test data setup."""
+
+    session = session_factory()
+
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def client(session_factory):
+    """Provide a test client backed by the fixture database."""
+
     def override_get_db():
-        db = TestingSessionLocal()
+        session = session_factory()
         try:
-            yield db
+            yield session
         finally:
-            db.close()
+            session.close()
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -42,5 +64,3 @@ def client():
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
-        Base.metadata.drop_all(bind=test_engine)
-        test_engine.dispose()

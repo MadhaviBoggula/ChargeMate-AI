@@ -1,5 +1,8 @@
 name: chargemate-ai
 
+x-backend-environment: &backend-environment
+  DATABASE_URL: postgresql+psycopg://chargemate:chargemate@db:5432/chargemate
+
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -25,14 +28,74 @@ services:
     container_name: chargemate-migrate
     env_file:
       - ./backend/.env
-    environment:
-      DATABASE_URL: postgresql+psycopg://chargemate:chargemate@db:5432/chargemate
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    environment: *backend-environment
     depends_on:
       db:
         condition: service_healthy
     command: ["alembic", "upgrade", "head"]
     restart: "no"
+
+  owner-mcp:
+    build:
+      context: ./backend
+    container_name: chargemate-owner-mcp
+    env_file:
+      - ./backend/.env
+    environment:
+      <<: *backend-environment
+      MCP_TRANSPORT: streamable-http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8101"
+    expose:
+      - "8101"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; socket.create_connection(('127.0.0.1', 8101), 3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    command: ["python", "-m", "app.mcp.owner_server"]
+
+  driver-mcp:
+    build:
+      context: ./backend
+    container_name: chargemate-driver-mcp
+    env_file:
+      - ./backend/.env
+    environment:
+      <<: *backend-environment
+      MCP_TRANSPORT: streamable-http
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8102"
+    expose:
+      - "8102"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; socket.create_connection(('127.0.0.1', 8102), 3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    command: ["python", "-m", "app.mcp.driver_server"]
 
   backend:
     build:
@@ -41,14 +104,31 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DATABASE_URL: postgresql+psycopg://chargemate:chargemate@db:5432/chargemate
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      <<: *backend-environment
+      MCP_OWNER_SERVER_URL: http://owner-mcp:8101/mcp
+      MCP_DRIVER_SERVER_URL: http://driver-mcp:8102/mcp
     ports:
       - "8000:8000"
     depends_on:
       migrate:
         condition: service_completed_successfully
+      owner-mcp:
+        condition: service_healthy
+      driver-mcp:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   pgdata:

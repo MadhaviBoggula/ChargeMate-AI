@@ -183,6 +183,7 @@ def ingest_document(
 
         if not changed and not force:
             outcome["status"] = "skipped"
+            outcome["chunks"] = document.chunk_count
             return outcome
 
         # Replace previous chunks atomically with the new ones

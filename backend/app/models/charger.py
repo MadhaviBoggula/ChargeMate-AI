@@ -1,78 +1,97 @@
+from __future__ import annotations
 
-from datetime import datetime
+import uuid
 from decimal import Decimal
 
 from sqlalchemy import (
-    DateTime,
+    CheckConstraint,
     ForeignKey,
-    Integer,
     Numeric,
     String,
-    func,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from uuid import UUID
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from app.database.base import Base
+
+from app.database.base import BaseModel
+
+CHARGER_STATUSES = ("active", "inactive", "maintenance", "faulted")
+CHARGER_AVAILABILITY = ("available", "occupied", "unavailable")
 
 
-class Charger(Base):
+class Charger(BaseModel):
+    """An individual charging unit belonging to a station."""
+
     __tablename__ = "chargers"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, index=True
+    __table_args__ = (
+        UniqueConstraint(
+            "charger_code",
+            name="uq_chargers_charger_code",
+        ),
+        CheckConstraint(
+            "charging_type IN ('AC', 'DC')",
+            name="charger_charging_type_valid",
+        ),
+        CheckConstraint(
+            "power_kw > 0",
+            name="charger_power_positive",
+        ),
+        CheckConstraint(
+            "price_per_kwh >= 0",
+            name="charger_price_nonnegative",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'inactive', 'maintenance', 'faulted')",
+            name="charger_status_valid",
+        ),
+        CheckConstraint(
+            "availability IN ('available', 'occupied', 'unavailable')",
+            name="charger_availability_valid",
+        ),
     )
-    station_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+
+    station_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("stations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,)
-    
-
-    charger_code: Mapped[str] = mapped_column(
-        String(80), unique=True, nullable=False, index=True
+        index=True,
     )
 
-    connector_type: Mapped[str] = mapped_column(
-        String(50), nullable=False
+    charger_code: Mapped[str] = mapped_column(
+        String(80),
+        nullable=False,
+        index=True,
     )
 
     charging_type: Mapped[str] = mapped_column(
-        String(2), nullable=False
+        String(2),
+        nullable=False,
     )
 
     power_kw: Mapped[Decimal] = mapped_column(
-        Numeric(8, 2), nullable=False
+        Numeric(8, 2),
+        nullable=False,
     )
 
     status: Mapped[str] = mapped_column(
         String(20),
-        nullable=False,
         default="active",
+        server_default="active",
+        nullable=False,
+        index=True,
     )
 
     availability: Mapped[str] = mapped_column(
         String(20),
-        nullable=False,
         default="available",
+        server_default="available",
+        nullable=False,
+        index=True,
     )
 
     price_per_kwh: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
-        nullable=False,
         default=Decimal("0.00"),
-    )
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
-
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
+        server_default="0.00",
         nullable=False,
     )
 
@@ -81,3 +100,14 @@ class Charger(Base):
         back_populates="chargers",
     )
 
+    connectors: Mapped[list["Connector"]] = relationship(
+        "Connector",
+        back_populates="charger",
+        cascade="all, delete-orphan",
+        order_by="Connector.connector_type",
+    )
+
+    sessions: Mapped[list["ChargingSession"]] = relationship(
+        "ChargingSession",
+        back_populates="charger",
+    )

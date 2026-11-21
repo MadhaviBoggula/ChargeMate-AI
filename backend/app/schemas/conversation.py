@@ -23,16 +23,6 @@ class ConversationResponse(BaseModel):
     updated_at: datetime
 
 
-class MessageCreate(BaseModel):
-    role: MessageRole
-    content: str = Field(min_length=1)
-    message_type: str = Field(
-        default="text",
-        max_length=50,
-    )
-    metadata_json: dict | None = None
-
-
 class MessageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

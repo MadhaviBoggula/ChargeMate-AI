@@ -269,6 +269,7 @@ class MCPToolRegistry:
             "user_id": context.get("user_id"),
             "role": context.get("role"),
             "conversation_id": context.get("conversation_id"),
+            "approved": context.get("approved") is True,
         }
 
         async def _call(session: ClientSession):

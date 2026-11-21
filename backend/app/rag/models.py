@@ -3,7 +3,15 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,21 +22,13 @@ DOCUMENT_STATUSES = ("pending", "processing", "indexed", "failed")
 KNOWLEDGE_ROLES = ("owner", "driver")
 
 
-def _role_enum():
-    return Enum(
-        *KNOWLEDGE_ROLES,
-        name="knowledge_role",
-        native_enum=False,
-    )
-
-
 class KnowledgeDocument(BaseModel):
     """Metadata record for one ingested knowledge document."""
 
     __tablename__ = "knowledge_documents"
 
     role: Mapped[str] = mapped_column(
-        _role_enum(),
+        String(16),
         nullable=False,
         index=True,
     )
@@ -46,11 +46,7 @@ class KnowledgeDocument(BaseModel):
         nullable=False,
     )
     status: Mapped[str] = mapped_column(
-        Enum(
-            *DOCUMENT_STATUSES,
-            name="knowledge_document_status",
-            native_enum=False,
-        ),
+        String(16),
         default="pending",
         nullable=False,
         index=True,
@@ -75,6 +71,15 @@ class KnowledgeEmbedding(BaseModel):
 
     __tablename__ = "knowledge_embeddings"
 
+    __table_args__ = (
+        Index(
+            "ix_knowledge_embeddings_vector",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
     document_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey(
             "knowledge_documents.id",
@@ -84,7 +89,7 @@ class KnowledgeEmbedding(BaseModel):
         index=True,
     )
     role: Mapped[str] = mapped_column(
-        _role_enum(),
+        String(16),
         nullable=False,
         index=True,
     )
@@ -92,10 +97,10 @@ class KnowledgeEmbedding(BaseModel):
         Integer,
         nullable=False,
     )
-    content: Mapped[str] = mapped_column(nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
     metadata_: Mapped[dict] = mapped_column(
         "metadata",
-        JSONB,
+        JSONB().with_variant(JSON(), "sqlite"),
         nullable=False,
     )
     embedding = mapped_column(

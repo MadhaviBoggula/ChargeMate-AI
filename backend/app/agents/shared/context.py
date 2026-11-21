@@ -118,6 +118,8 @@ def save_exchange(
         created_at=now + timedelta(microseconds=1),
     )
 
+    conversation.updated_at = now
+
     db.add(user_row)
     db.add(assistant_row)
     db.commit()

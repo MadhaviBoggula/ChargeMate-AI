@@ -87,7 +87,7 @@ async def test_reindex_replaces_chunks(ingested: dict) -> None:
 
     from app.database.session import SessionLocal
     from app.rag.ingest import ingest_document
-    from app.rag.models import KnowledgeEmbedding
+    from app.rag.models import KnowledgeDocument, KnowledgeEmbedding
 
     source = settings.driver_knowledge_dir / "charging_basics.txt"
     result = ingest_document(source, "driver", force=True)
@@ -95,11 +95,22 @@ async def test_reindex_replaces_chunks(ingested: dict) -> None:
 
     session = SessionLocal()
     try:
+        document = session.scalar(
+            select(KnowledgeDocument).where(
+                KnowledgeDocument.source_path == str(source)
+            )
+        )
+        assert document is not None
+
         rows = session.execute(
             select(KnowledgeEmbedding).where(
-                KnowledgeEmbedding.role == "driver"
+                KnowledgeEmbedding.document_id == document.id
             )
         ).scalars().all()
+
+        # Reindexing replaces the same document's chunks, never duplicates
+        # them, and leaves other driver documents untouched.
         assert len({row.document_id for row in rows}) == 1
+        assert len(rows) == document.chunk_count
     finally:
         session.close()

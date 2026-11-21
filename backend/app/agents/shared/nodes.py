@@ -43,10 +43,18 @@ Rules:
 
 
 def _confirmation_context(state: GraphState) -> dict[str, Any]:
+    """Build the trusted tool context.
+
+    ``approved`` is only true when the backend injected an explicit
+    confirmation action into the graph state. Model output can never
+    set it.
+    """
+
     return {
         "user_id": state.get("user_id", ""),
         "role": state.get("role", "driver"),
         "conversation_id": state.get("conversation_id", ""),
+        "approved": state.get("confirmation_action") == "confirm",
     }
 
 

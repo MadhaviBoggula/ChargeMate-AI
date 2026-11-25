@@ -274,3 +274,469 @@ def test_confirmation_flow_passes_pending_proposal(client, invoke_calls):
         confirmation_messages[0]["metadata_json"]["pending_confirmation"]
         == pending
     )
+
+
+def create_pending_proposal(client, token, scripted, proposal_id):
+    pending = {
+        "action": "confirm_booking",
+        "proposal_id": proposal_id,
+        "tool": "confirm_booking",
+        "arguments": {"proposal_id": proposal_id},
+        "summary": {
+            "station": "Kukatpally",
+            "duration_minutes": 30,
+        },
+    }
+
+    scripted.append(default_result(pending_confirmation=pending))
+
+    response = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"message": "Prepare a booking"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["pending_confirmation"] == pending
+
+    return response.json()["conversation_id"], pending
+
+
+def test_confirmation_cannot_be_replayed_after_confirm(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "replayconfirm@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "confirm-once",
+    )
+
+    scripted.append(default_result(response="Booking confirmed."))
+
+    first = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm again",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert second.status_code == 409
+
+    # Initial proposal + first confirmation only.
+    assert len(calls) == 2
+
+
+def test_confirmation_cannot_be_replayed_after_reject(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "replayreject@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "reject-once",
+    )
+
+    scripted.append(default_result(response="Booking proposal rejected."))
+
+    first = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Reject",
+            "conversation_id": conversation_id,
+            "confirmation_action": "reject",
+        },
+    )
+
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Reject again",
+            "conversation_id": conversation_id,
+            "confirmation_action": "reject",
+        },
+    )
+
+    assert second.status_code == 409
+
+    # Initial proposal + first rejection only.
+    assert len(calls) == 2
+
+
+def test_failed_confirmation_cannot_be_replayed(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "replayfailure@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "failure-once",
+    )
+
+    scripted.append(LLMError("provider unavailable"))
+
+    first = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert first.status_code == 502
+
+    second = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Try confirming again",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert second.status_code == 409
+
+    # The failed confirmation was attempted only once.
+    assert len(calls) == 2
+
+
+def test_new_proposal_can_be_confirmed_after_previous_one(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "newproposal@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "first-proposal",
+    )
+
+    # Confirm the first proposal.
+    scripted.append(default_result(response="First booking confirmed."))
+
+    first_confirmation = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm first booking",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert first_confirmation.status_code == 200
+
+    # The agent can create a new, independent proposal.
+    second_pending = {
+        "action": "confirm_booking",
+        "proposal_id": "second-proposal",
+        "tool": "confirm_booking",
+        "arguments": {"proposal_id": "second-proposal"},
+        "summary": {
+            "station": "Miyapur",
+            "duration_minutes": 60,
+        },
+    }
+
+    scripted.append(default_result(pending_confirmation=second_pending))
+
+    new_proposal = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Prepare another booking",
+            "conversation_id": conversation_id,
+        },
+    )
+
+    assert new_proposal.status_code == 200
+    assert new_proposal.json()["pending_confirmation"] == second_pending
+
+    # The second proposal should be independently confirmable.
+    scripted.append(default_result(response="Second booking confirmed."))
+
+    second_confirmation = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm second booking",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert second_confirmation.status_code == 200
+    assert second_confirmation.json()["response"] == "Second booking confirmed."
+
+    # Two proposals and two successful confirmations.
+    assert len(calls) == 4
+
+
+def create_pending_proposal(client, token, scripted, proposal_id):
+    pending = {
+        "action": "confirm_booking",
+        "proposal_id": proposal_id,
+        "tool": "confirm_booking",
+        "arguments": {"proposal_id": proposal_id},
+        "summary": {
+            "station": "Kukatpally",
+            "duration_minutes": 30,
+        },
+    }
+
+    scripted.append(default_result(pending_confirmation=pending))
+
+    response = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"message": "Prepare a booking"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["pending_confirmation"] == pending
+
+    return response.json()["conversation_id"], pending
+
+
+def test_confirmation_cannot_be_replayed_after_confirm(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "replayconfirm@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "confirm-once",
+    )
+
+    scripted.append(default_result(response="Booking confirmed."))
+
+    first = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm again",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert second.status_code == 409
+
+    # Initial proposal + first confirmation only.
+    assert len(calls) == 2
+
+
+def test_confirmation_cannot_be_replayed_after_reject(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "replayreject@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "reject-once",
+    )
+
+    scripted.append(default_result(response="Booking proposal rejected."))
+
+    first = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Reject",
+            "conversation_id": conversation_id,
+            "confirmation_action": "reject",
+        },
+    )
+
+    assert first.status_code == 200
+
+    second = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Reject again",
+            "conversation_id": conversation_id,
+            "confirmation_action": "reject",
+        },
+    )
+
+    assert second.status_code == 409
+
+    # Initial proposal + first rejection only.
+    assert len(calls) == 2
+
+
+def test_failed_confirmation_cannot_be_replayed(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "replayfailure@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "failure-once",
+    )
+
+    scripted.append(LLMError("provider unavailable"))
+
+    first = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert first.status_code == 502
+
+    second = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Try confirming again",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert second.status_code == 409
+
+    # The failed confirmation was attempted only once.
+    assert len(calls) == 2
+
+
+def test_new_proposal_can_be_confirmed_after_previous_one(
+    client,
+    invoke_calls,
+):
+    calls, scripted = invoke_calls
+    token = register_and_login(client, "newproposal@example.com")
+
+    conversation_id, _ = create_pending_proposal(
+        client,
+        token,
+        scripted,
+        "first-proposal",
+    )
+
+    # Confirm the first proposal.
+    scripted.append(default_result(response="First booking confirmed."))
+
+    first_confirmation = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm first booking",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert first_confirmation.status_code == 200
+
+    # The agent can create a new, independent proposal.
+    second_pending = {
+        "action": "confirm_booking",
+        "proposal_id": "second-proposal",
+        "tool": "confirm_booking",
+        "arguments": {"proposal_id": "second-proposal"},
+        "summary": {
+            "station": "Miyapur",
+            "duration_minutes": 60,
+        },
+    }
+
+    scripted.append(default_result(pending_confirmation=second_pending))
+
+    new_proposal = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Prepare another booking",
+            "conversation_id": conversation_id,
+        },
+    )
+
+    assert new_proposal.status_code == 200
+    assert new_proposal.json()["pending_confirmation"] == second_pending
+
+    # The second proposal should be independently confirmable.
+    scripted.append(default_result(response="Second booking confirmed."))
+
+    second_confirmation = client.post(
+        "/api/v1/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "message": "Confirm second booking",
+            "conversation_id": conversation_id,
+            "confirmation_action": "confirm",
+        },
+    )
+
+    assert second_confirmation.status_code == 200
+    assert second_confirmation.json()["response"] == "Second booking confirmed."
+
+    # Two proposals and two successful confirmations.
+    assert len(calls) == 4

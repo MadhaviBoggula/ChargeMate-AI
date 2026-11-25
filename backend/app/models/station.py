@@ -1,21 +1,22 @@
+import uuid
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Float,
-    Integer,
     ForeignKey,
     JSON,
     String,
+    Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import BaseModel
-from uuid import UUID
-from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
-class ChargingStation(BaseModel):
+
+class Station(BaseModel):
+    """Canonical SQLAlchemy model for a charging station."""
+
     __tablename__ = "stations"
 
     __table_args__ = (
@@ -41,62 +42,70 @@ class ChargingStation(BaseModel):
         ),
     )
 
-    # Nullable initially to preserve existing station records.
-    address_id: Mapped[int | None] = mapped_column(
-        Integer,
-        ForeignKey("addresses.id"),
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    owner_id: Mapped[UUID | None] = mapped_column(
-    PG_UUID(as_uuid=True),
-    ForeignKey("users.id"),
-    nullable=True,
-    index=True,
+
+    address_id: Mapped[int | None] = mapped_column(
+        ForeignKey("addresses.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
+
     name: Mapped[str] = mapped_column(
-        String(255), nullable=False
+        String(255),
+        nullable=False,
     )
 
     location: Mapped[str] = mapped_column(
-        String(255), nullable=True
+        String(255),
+        nullable=False,
     )
 
-    # Preserve existing textual address.
     address: Mapped[str] = mapped_column(
-        String(500), nullable=True
+        String(500),
+        nullable=False,
     )
 
     connectors: Mapped[list[str]] = mapped_column(
-        JSON, nullable=True
+        JSON,
+        nullable=False,
     )
 
     charger_type: Mapped[str] = mapped_column(
-        String(2), nullable=True
+        String(2),
+        nullable=False,
     )
 
     power: Mapped[float] = mapped_column(
-        Float, nullable=False
+        Float,
+        nullable=False,
     )
 
     speed: Mapped[str] = mapped_column(
-        String(20), nullable=True
+        String(20),
+        nullable=False,
     )
 
     available_slots: Mapped[int] = mapped_column(
-        nullable=False
+        nullable=False,
     )
 
     total_slots: Mapped[int] = mapped_column(
-        nullable=True
+        nullable=False,
     )
 
     price_per_kwh: Mapped[float] = mapped_column(
-        Float, nullable=True
+        Float,
+        nullable=False,
     )
 
     description: Mapped[str] = mapped_column(
-        String(1000), nullable=False
+        String(1000),
+        nullable=False,
     )
 
     is_active: Mapped[bool] = mapped_column(
@@ -114,4 +123,14 @@ class ChargingStation(BaseModel):
     chargers: Mapped[list["Charger"]] = relationship(
         "Charger",
         back_populates="station",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
+
+
+# Backward compatibility for existing upstream imports.
+# Both names refer to the SAME SQLAlchemy model and mapper.
+ChargingStation = Station
+
+
+__all__ = ["Station", "ChargingStation"]

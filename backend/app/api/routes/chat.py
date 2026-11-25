@@ -24,12 +24,24 @@ logger = logging.getLogger("chargemate.chat")
 router = APIRouter()
 
 CONFIRMATION_MESSAGE_TYPE = "confirmation_request"
+CONFIRMATION_STATUS_KEY = "confirmation_status"
+CONFIRMATION_PENDING = "pending"
+CONFIRMATION_PROCESSING = "processing"
+CONFIRMATION_CONSUMED = "consumed"
 
 
-def _load_pending_confirmation(
+def _claim_pending_confirmation(
     db: Session,
     conversation_id: UUID,
-) -> dict | None:
+) -> tuple[UUID, dict] | None:
+    """
+    Atomically claim the latest confirmation proposal.
+
+    PostgreSQL row locking prevents two concurrent requests from claiming
+    the same proposal. The processing state is committed before the agent
+    is invoked, so a failed or interrupted execution cannot be replayed.
+    """
+
     message = db.scalar(
         select(Message)
         .where(
@@ -37,14 +49,57 @@ def _load_pending_confirmation(
             Message.message_type == CONFIRMATION_MESSAGE_TYPE,
         )
         .order_by(Message.created_at.desc())
+        .limit(1)
+        .with_for_update()
     )
 
     if message is None:
         return None
 
-    metadata = message.metadata_json or {}
+    metadata = dict(message.metadata_json or {})
 
-    return metadata.get("pending_confirmation")
+    pending = metadata.get("pending_confirmation")
+    confirmation_status = metadata.get(
+        CONFIRMATION_STATUS_KEY,
+        CONFIRMATION_PENDING,
+    )
+
+    if not isinstance(pending, dict):
+        return None
+
+    if confirmation_status != CONFIRMATION_PENDING:
+        return None
+
+    metadata[CONFIRMATION_STATUS_KEY] = CONFIRMATION_PROCESSING
+    message.metadata_json = metadata
+
+    # Commit the claim before making the external MCP/agent call.
+    db.commit()
+
+    return message.id, pending
+
+
+def _mark_confirmation_consumed(
+    db: Session,
+    message_id: UUID,
+) -> None:
+    """Mark a successfully handled confirmation as permanently consumed."""
+
+    message = db.scalar(
+        select(Message)
+        .where(Message.id == message_id)
+        .with_for_update()
+    )
+
+    if message is None:
+        return
+
+    metadata = dict(message.metadata_json or {})
+
+    if metadata.get(CONFIRMATION_STATUS_KEY) == CONFIRMATION_PROCESSING:
+        metadata[CONFIRMATION_STATUS_KEY] = CONFIRMATION_CONSUMED
+        message.metadata_json = metadata
+        db.commit()
 
 
 @router.post("", response_model=ChatResponse)
@@ -62,7 +117,6 @@ async def chat(
     """
 
     role = current_user.role.value
-
     conversation_id = request.conversation_id
 
     if conversation_id is None and request.confirmation_action:
@@ -74,6 +128,7 @@ async def chat(
         )
 
     pending_confirmation = None
+    confirmation_message_id = None
 
     if conversation_id is not None:
         try:
@@ -89,19 +144,22 @@ async def chat(
             )
 
         if request.confirmation_action:
-            pending_confirmation = _load_pending_confirmation(
+            claimed = _claim_pending_confirmation(
                 db,
                 conversation_id,
             )
 
-            if pending_confirmation is None:
+            if claimed is None:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=(
-                        "No pending operation is awaiting confirmation in "
-                        "this conversation."
+                        "This confirmation is no longer available. "
+                        "It may already have been processed."
                     ),
                 )
+
+            confirmation_message_id, pending_confirmation = claimed
+
     else:
         conversation = Conversation(
             user_id=current_user.id,
@@ -125,16 +183,31 @@ async def chat(
             pending_confirmation=pending_confirmation,
             confirmation_action=request.confirmation_action,
         )
+
     except LLMConfigError:
+        # Leave the claim in "processing". Do not allow an uncertain
+        # operation to be retried automatically.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="The assistant is not configured. Contact the operator.",
         )
+
     except LLMError as exc:
         logger.warning("Chat invocation failed: %s", exc)
+
+        # Keep the proposal claimed. The external operation's outcome
+        # may be uncertain, so replaying it could create duplicates.
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="The assistant is temporarily unavailable. Try again.",
+        )
+
+    # The agent returned successfully. The original proposal must no
+    # longer be usable, whether the user confirmed or rejected it.
+    if confirmation_message_id is not None:
+        _mark_confirmation_consumed(
+            db,
+            confirmation_message_id,
         )
 
     assistant_message_type = (
@@ -160,6 +233,7 @@ async def chat(
             },
             assistant_message_type=assistant_message_type,
         )
+
     except ConversationNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

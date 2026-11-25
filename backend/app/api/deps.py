@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.services.token import decode_access_token
 
 
@@ -20,8 +20,6 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    """Identify the user associated with a valid access token."""
-
     unauthorized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired authentication token.",
@@ -51,17 +49,14 @@ def get_current_user(
 
 def get_owner_id(
     current_user: User = Depends(get_current_user),
-):
+) -> UUID:
     role = current_user.role
-
-    role_value = (
-        role.value if hasattr(role, "value") else role
-    )
+    role_value = role.value if hasattr(role, "value") else role
 
     if not isinstance(role_value, str) or role_value.lower() != "owner":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only owners can access this resource",
+            detail="Only owners can access this resource.",
         )
 
     return current_user.id

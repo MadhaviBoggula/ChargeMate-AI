@@ -1,18 +1,10 @@
-
 from datetime import datetime
 from decimal import Decimal
-
-from sqlalchemy import (
-    DateTime,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-    func,
-)
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from uuid import UUID
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+
+from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Uuid, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.database.base import Base
 
 
@@ -20,29 +12,38 @@ class Charger(Base):
     __tablename__ = "chargers"
 
     id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, index=True
+        Integer,
+        primary_key=True,
+        index=True,
     )
+
     station_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("stations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,)
-    
+        index=True,
+    )
 
     charger_code: Mapped[str] = mapped_column(
-        String(80), unique=True, nullable=False, index=True
+        String(80),
+        unique=True,
+        nullable=False,
+        index=True,
     )
 
     connector_type: Mapped[str] = mapped_column(
-        String(50), nullable=False
+        String(50),
+        nullable=False,
     )
 
     charging_type: Mapped[str] = mapped_column(
-        String(2), nullable=False
+        String(2),
+        nullable=False,
     )
 
     power_kw: Mapped[Decimal] = mapped_column(
-        Numeric(8, 2), nullable=False
+        Numeric(8, 2),
+        nullable=False,
     )
 
     status: Mapped[str] = mapped_column(
@@ -76,8 +77,7 @@ class Charger(Base):
         nullable=False,
     )
 
-    station: Mapped["ChargingStation"] = relationship(
-        "ChargingStation",
+    station: Mapped["Station"] = relationship(
+        "Station",
         back_populates="chargers",
     )
-

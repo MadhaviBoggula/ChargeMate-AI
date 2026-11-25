@@ -1,11 +1,10 @@
-
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from app.core.config import settings
 
-from sqlalchemy.orm import DeclarativeBase
+from app.core.config import settings
+from app.database.base import Base
 
 
 def get_database_url() -> str:
@@ -32,8 +31,7 @@ def get_database_url() -> str:
 
     return database_url
 
-class Base(DeclarativeBase):
-    pass
+
 DATABASE_URL = get_database_url()
 
 engine = create_engine(

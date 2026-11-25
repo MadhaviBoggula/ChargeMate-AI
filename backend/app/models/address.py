@@ -1,4 +1,3 @@
-
 from datetime import datetime
 
 from sqlalchemy import DateTime, Float, Integer, String, func
@@ -11,33 +10,46 @@ class Address(Base):
     __tablename__ = "addresses"
 
     id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, index=True )
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
     hno: Mapped[str | None] = mapped_column(
-        String(50), nullable=True
+        String(50),
+        nullable=True,
     )
 
     street_village: Mapped[str] = mapped_column(
-        String(255), nullable=False
+        String(255),
+        nullable=False,
     )
 
     city: Mapped[str] = mapped_column(
-        String(100), nullable=False, index=True
+        String(100),
+        nullable=False,
+        index=True,
     )
 
     state: Mapped[str] = mapped_column(
-        String(100), nullable=False
+        String(100),
+        nullable=False,
     )
 
     pincode: Mapped[str] = mapped_column(
-        String(10), nullable=False, index=True
+        String(10),
+        nullable=False,
+        index=True,
     )
 
     lat: Mapped[float | None] = mapped_column(
-        Float, nullable=True
+        Float,
+        nullable=True,
     )
 
     long: Mapped[float | None] = mapped_column(
-        Float, nullable=True
+        Float,
+        nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -53,8 +65,7 @@ class Address(Base):
         nullable=False,
     )
 
-    stations: Mapped[list["ChargingStation"]] = relationship(
-        "ChargingStation",
+    stations: Mapped[list["Station"]] = relationship(
+        "Station",
         back_populates="address_record",
     )
-

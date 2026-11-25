@@ -8,11 +8,13 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 
 from app.api.routes.auth import router as auth_router
+from app.api.routes.chat import router as chat_router
 from app.api.routes.conversations import (
     router as conversations_router,
 )
 from app.core.config import settings
 from app.database.session import engine
+from app.mcp.client import close_mcp_connections
 
 
 # Structured JSON logging
@@ -57,6 +59,8 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("ChargeMate AI application shutting down")
+
+    await close_mcp_connections()
     engine.dispose()
 
 
@@ -83,6 +87,14 @@ app.include_router(
     conversations_router,
     prefix=f"{settings.api_v1_prefix}/conversations",
     tags=["Conversations"],
+)
+
+
+# Conversational assistant API routes
+app.include_router(
+    chat_router,
+    prefix=f"{settings.api_v1_prefix}/chat",
+    tags=["Chat"],
 )
 
 

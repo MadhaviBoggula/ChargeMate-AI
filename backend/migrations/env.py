@@ -10,6 +10,7 @@ from app.database.session import engine
 # Import the application's model package so its models
 # are registered with Base.metadata when they are added.
 import app.models
+from app.rag import models as rag_models  # noqa: F401
 
 
 config = context.config

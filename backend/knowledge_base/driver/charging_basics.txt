@@ -1,0 +1,16 @@
+EV Charging Basics for Drivers
+
+AC vs DC charging:
+Alternating current (AC) charging uses the charger's onboard inverter. Level 1 (a regular wall outlet, ~2-3 kW) and Level 2 (240V, 7-19 kW) are AC charging. Direct current (DC) fast charging, also called Level 3, bypasses the onboard inverter and feeds the battery directly, typically 50-350 kW. DC charging is much faster but more expensive per kWh.
+
+Charging speeds and times:
+Charging time depends on battery size, state of charge, and charger power. A 60 kWh battery on a 7 kW AC charger takes roughly 8-9 hours from 20% to 100%. On a 150 kW DC fast charger the same session takes about 30-40 minutes to reach 80%. Charging slows down above 80% state of charge to protect the battery.
+
+Connector types:
+CCS (Combined Charging System) is the most common DC fast-charging connector. Type 2 is the standard AC connector in most regions. CHAdeMO is an older DC standard still found on some vehicles. Adapters exist but availability varies.
+
+Battery health tips:
+Avoid regularly charging to 100% unless needed for a long trip; 80% is a healthy daily target. Avoid letting the battery sit below 10% for long periods. Extreme heat accelerates degradation; precondition the battery before DC fast charging in cold weather.
+
+Public charging etiquette:
+Move your vehicle promptly when charging finishes. Unplug only your own vehicle unless the owner permits it. Report broken chargers through the network's app so others are not stranded.

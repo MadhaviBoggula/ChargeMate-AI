@@ -1,0 +1,16 @@
+Charger Operations Guide for Station Owners
+
+Preventive maintenance schedule:
+Inspect DC fast-charger cables and connectors visually every week for cracks, fraying, burnt smell, or bent pins. Schedule a full electrical inspection quarterly. Clean connector housings monthly with a dry cloth; never use solvents on pins. Test emergency stop buttons quarterly and log the result.
+
+Cable and connector care:
+Hanging cables properly on the holster prevents strain on the strain relief. Replace any cable with exposed conductors immediately and lock the charger out of service until replaced. Ice in connectors must thaw naturally; never force a frozen connector.
+
+Session and pricing management:
+Review charging sessions weekly to spot failed sessions, which indicate hardware or network issues. Keep pricing consistent between the network app and the charger display to avoid disputes. Dynamic pricing changes must be published at least 24 hours in advance when possible.
+
+Downtime response:
+When a charger goes offline, first check the network status dashboard, then power-cycle the charger at the breaker if the dashboard shows a stale heartbeat. Escalate to the hardware vendor if the charger remains unreachable for more than one hour. Communicate expected restoration times to drivers through the station notes.
+
+Safety and compliance:
+Keep the charging bay clear of trip hazards and snow. Fire extinguishers rated for electrical fires (Class C or equivalent) must be within 15 meters. Maintain inspection logs for at least two years for insurance and compliance audits.

@@ -1,0 +1,151 @@
+export type UserRole = 'owner' | 'driver'
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  role: UserRole
+  is_active: boolean
+}
+
+export interface RegisterRequest {
+  name: string
+  email: string
+  password: string
+  role: UserRole
+}
+
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+}
+
+export interface Station {
+  id: string
+  address_id: number | null
+  owner_id: string | null
+  name: string
+  location: string | null
+  address: string | null
+  connectors: string[] | null
+  charger_type: string | null
+  power: number
+  speed: string | null
+  available_slots: number
+  total_slots: number
+  price_per_kwh: number
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface OwnerStation {
+  id: string
+  owner_id: string
+  name: string
+  location: string
+  address: string
+  connectors: string[]
+  charger_type: string
+  power: number
+  speed: string
+  available_slots: number
+  total_slots: number
+  price_per_kwh: number
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface OwnerStationCreate {
+  name: string
+  location: string
+  address: string
+  connectors: string[]
+  charger_type: string
+  power: number
+  speed: string
+  available_slots: number
+  total_slots: number
+  price_per_kwh: number
+  description: string
+  is_active: boolean
+}
+
+export interface OwnerCharger {
+  id: number
+  station_id: string
+  charger_code: string
+  connector_type: string
+  charging_type: 'AC' | 'DC'
+  power_kw: number
+  status: 'active' | 'inactive' | 'maintenance' | 'faulted'
+  availability: 'available' | 'occupied' | 'unavailable'
+  price_per_kwh: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Conversation {
+  id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type MessageRole = 'user' | 'assistant' | 'system' | 'tool'
+
+export interface Message {
+  id: string
+  conversation_id: string
+  role: MessageRole
+  content: string
+  message_type: string
+  metadata_json: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface ConversationDetail extends Conversation {
+  messages: Message[]
+}
+
+export interface ChatRequest {
+  message: string
+  conversation_id?: string | null
+  confirmation_action?: 'confirm' | 'reject' | null
+}
+
+export interface ChatResponse {
+  conversation_id: string
+  response: string
+  route: string
+  tool_results: Record<string, unknown>[]
+  rag_context: Record<string, unknown>[]
+  pending_confirmation: Record<string, unknown> | null
+  message_id: string | null
+  created_at: string | null
+}
+
+export interface Booking {
+  id: string
+  user_id: string
+  station_id: string
+  booking_time: string
+  duration_minutes: number
+  end_time: string
+  status: string
+  created_at: string
+}
+
+export interface BookingCreate {
+  station_id: string
+  booking_time: string
+  duration_minutes: 30 | 60 | 120
+}

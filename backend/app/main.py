@@ -1,132 +1,249 @@
-import json
-import logging
+
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from app.core.logger import setup_logging, get_logger
 
-from app.api.routes.auth import router as auth_router
-from app.api.routes.bookings import router as bookings_router
-from app.api.routes.chat import router as chat_router
-from app.api.routes.conversations import router as conversations_router
-from app.api.routes.driver import router as driver_router
-from app.api.routes.owner import router as owner_router
-from app.core.config import settings
-from app.database.session import engine
-from app.mcp.client import close_mcp_connections
-from app.routers.addresses import router as addresses_router
-from app.routers.station import router as station_router
+# ==========================================================
+# 1. INITIALIZE LOGGING
+# ==========================================================
+
+setup_logging()
+
+logger = get_logger(__name__)
+
+logger.info("=" * 60)
+logger.info("ChargeMate AI Backend initialization started")
+logger.info("=" * 60)
 
 
-class JSONFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:
-        log_data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-        }
+# ==========================================================
+# 2. IMPORT APPLICATION MODULES
+# ==========================================================
 
-        for field in (
-            "http_method",
-            "http_path",
-            "status_code",
-            "duration_ms",
-        ):
-            if hasattr(record, field):
-                log_data[field] = getattr(record, field)
+try:
+    logger.debug("[IMPORT] Importing FastAPI modules")
 
-        if record.exc_info:
-            log_data["exception"] = self.formatException(
-                record.exc_info
-            )
+    from fastapi import FastAPI, HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
+    from sqlalchemy import text
 
-        return json.dumps(log_data)
+    logger.debug("[IMPORT] FastAPI modules imported")
+
+    logger.debug("[IMPORT] Loading application settings")
+
+    from app.core.config import settings
+
+    logger.debug("[IMPORT] Application settings loaded")
+
+    logger.debug("[IMPORT] Loading database engine")
+
+    from app.database.session import engine
+
+    logger.debug("[IMPORT] Database engine loaded")
+
+    logger.debug("[IMPORT] Loading MCP client")
+
+    from app.mcp.client import close_mcp_connections
+
+    logger.debug("[IMPORT] MCP client loaded")
+
+    logger.debug("[IMPORT] Loading logging middleware")
+
+    from app.middleware.logging_middleware import LoggingMiddleware
+
+    logger.debug("[IMPORT] Logging middleware loaded")
+
+    # Import API routers
+
+    logger.debug("[IMPORT] Loading authentication router")
+    from app.api.routes.auth import router as auth_router
+
+    logger.debug("[IMPORT] Loading bookings router")
+    from app.api.routes.bookings import router as bookings_router
+
+    logger.debug("[IMPORT] Loading chat router")
+    from app.api.routes.chat import router as chat_router
+
+    logger.debug("[IMPORT] Loading conversations router")
+    from app.api.routes.conversations import router as conversations_router
+
+    logger.debug("[IMPORT] Loading driver router")
+    from app.api.routes.driver import router as driver_router
+
+    logger.debug("[IMPORT] Loading owner router")
+    from app.api.routes.owner import router as owner_router
+
+    logger.debug("[IMPORT] Loading addresses router")
+    from app.routers.addresses import router as addresses_router
+
+    logger.debug("[IMPORT] Loading station router")
+    from app.routers.station import router as station_router
+
+    logger.info("[IMPORT] All application modules loaded successfully")
+
+except Exception:
+    logger.exception("[IMPORT FAILED] Application module import failed")
+    raise
 
 
-def configure_logging() -> None:
-    handler = logging.StreamHandler()
-    handler.setFormatter(JSONFormatter())
-
-    root_logger = logging.getLogger()
-    root_logger.handlers.clear()
-    root_logger.addHandler(handler)
-    root_logger.setLevel(
-        logging.DEBUG if settings.debug else logging.INFO
-    )
-
-
-configure_logging()
-logger = logging.getLogger("chargemate")
-
+# ==========================================================
+# 3. APPLICATION LIFESPAN
+# ==========================================================
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("ChargeMate AI application starting")
-    yield
-    logger.info("ChargeMate AI application shutting down")
-    await close_mcp_connections()
-    engine.dispose()
 
-
-app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
-    description="ChargeMate AI Backend API",
-    debug=settings.debug,
-    lifespan=lifespan,
-)
-
-
-@app.middleware("http")
-async def request_logging_middleware(
-    request: Request,
-    call_next,
-):
     start_time = time.perf_counter()
 
-    method = request.method
-    path = request.url.path
+    logger.info("=" * 60)
+    logger.info("[STARTUP] ChargeMate AI application starting")
+    logger.info("[STARTUP] Application: %s", settings.app_name)
+    logger.info("[STARTUP] Version: %s", settings.app_version)
+    logger.info("[STARTUP] Debug mode: %s", settings.debug)
+    logger.info("[STARTUP] API prefix: %s", settings.api_v1_prefix)
+
+    # Check database connectivity during startup.
+    # A failed check is logged but does not prevent startup.
 
     try:
-        response = await call_next(request)
+        logger.info("[DATABASE] Checking database connectivity")
 
-        duration_ms = round(
-            (time.perf_counter() - start_time) * 1000,
-            2,
+        database_start = time.perf_counter()
+
+        with engine.connect() as connection:
+
+            logger.debug("[DATABASE] Connection established")
+
+            connection.execute(text("SELECT 1"))
+
+            logger.debug("[DATABASE] Test query executed")
+
+        database_duration = (
+            time.perf_counter() - database_start
         )
 
         logger.info(
-            "HTTP request completed",
-            extra={
-                "http_method": method,
-                "http_path": path,
-                "status_code": response.status_code,
-                "duration_ms": duration_ms,
-            },
+            "[DATABASE] Database connected successfully | Time: %.3fs",
+            database_duration,
         )
-
-        return response
 
     except Exception:
-        duration_ms = round(
-            (time.perf_counter() - start_time) * 1000,
-            2,
-        )
 
         logger.exception(
-            "HTTP request failed",
-            extra={
-                "http_method": method,
-                "http_path": path,
-                "duration_ms": duration_ms,
-            },
+            "[DATABASE FAILED] Startup database connection check failed"
         )
-        raise
 
+        logger.warning(
+            "[STARTUP] Application will start, "
+            "but database operations may be unavailable"
+        )
+
+    startup_duration = time.perf_counter() - start_time
+
+    logger.info(
+        "[STARTUP] Application startup completed | Time: %.3fs",
+        startup_duration,
+    )
+
+    logger.info("=" * 60)
+
+    try:
+        yield
+
+    finally:
+
+        # Application shutdown
+
+        shutdown_start = time.perf_counter()
+
+        logger.info("=" * 60)
+        logger.info("[SHUTDOWN] ChargeMate AI shutting down")
+
+        # Close MCP connections
+
+        try:
+
+            logger.info("[SHUTDOWN] Closing MCP connections")
+
+            await close_mcp_connections()
+
+            logger.info(
+                "[SHUTDOWN] MCP connections closed successfully"
+            )
+
+        except Exception:
+
+            logger.exception(
+                "[SHUTDOWN FAILED] Error closing MCP connections"
+            )
+
+        # Dispose database engine
+
+        try:
+
+            logger.info("[SHUTDOWN] Disposing database engine")
+
+            engine.dispose()
+
+            logger.info(
+                "[SHUTDOWN] Database engine disposed successfully"
+            )
+
+        except Exception:
+
+            logger.exception(
+                "[SHUTDOWN FAILED] Error disposing database engine"
+            )
+
+        logger.info(
+            "[SHUTDOWN] Cleanup finished | Time: %.3fs",
+            time.perf_counter() - shutdown_start,
+        )
+
+        logger.info("=" * 60)
+
+
+# ==========================================================
+# 4. CREATE FASTAPI APPLICATION
+# ==========================================================
+
+try:
+
+    logger.info("[APP] Creating FastAPI application")
+
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        description="ChargeMate AI Backend API",
+        debug=settings.debug,
+        lifespan=lifespan,
+    )
+
+    logger.info("[APP] FastAPI application created successfully")
+
+except Exception:
+
+    logger.exception("[APP FAILED] FastAPI initialization failed")
+    raise
+
+
+# ==========================================================
+# 5. REGISTER LOGGING MIDDLEWARE
+# ==========================================================
+
+logger.info("[MIDDLEWARE] Registering logging middleware")
+
+app.add_middleware(LoggingMiddleware)
+
+logger.info("[MIDDLEWARE] Logging middleware registered")
+
+
+# ==========================================================
+# 6. REGISTER CORS MIDDLEWARE
+# ==========================================================
+
+logger.info("[MIDDLEWARE] Configuring CORS middleware")
 
 app.add_middleware(
     CORSMiddleware,
@@ -139,69 +256,163 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+logger.info("[MIDDLEWARE] CORS middleware configured")
 
-# Authentication
-app.include_router(
-    auth_router,
-    prefix=f"{settings.api_v1_prefix}/auth",
-    tags=["Authentication"],
-)
 
-# Conversations
-app.include_router(
-    conversations_router,
-    prefix=f"{settings.api_v1_prefix}/conversations",
-    tags=["Conversations"],
-)
+# ==========================================================
+# 7. REGISTER API ROUTERS
+# ==========================================================
 
-# AI chat assistant
-app.include_router(
-    chat_router,
-    prefix=f"{settings.api_v1_prefix}/chat",
-    tags=["Chat"],
-)
+try:
 
-# Charging stations (router already defines its API prefix)
-app.include_router(station_router)
+    logger.info("[ROUTERS] Registering API routers")
 
-# Addresses (router already defines its API prefix)
-app.include_router(addresses_router)
+    # Authentication
 
-# Owner station and charger management
-app.include_router(
-    owner_router,
-    prefix=f"{settings.api_v1_prefix}/owner",
-    tags=["Owner Station Management"],
-)
+    logger.debug("[ROUTER] Registering Authentication")
 
-# Driver vehicles and favorite stations
-app.include_router(
-    driver_router,
-    prefix=f"{settings.api_v1_prefix}/driver",
-)
+    app.include_router(
+        auth_router,
+        prefix=f"{settings.api_v1_prefix}/auth",
+        tags=["Authentication"],
+    )
 
-# Driver bookings
-app.include_router(
-    bookings_router,
-    prefix=f"{settings.api_v1_prefix}/bookings",
-    tags=["Driver Bookings"],
-)
+    logger.info("[ROUTER] Authentication registered")
 
+    # Conversations
+
+    logger.debug("[ROUTER] Registering Conversations")
+
+    app.include_router(
+        conversations_router,
+        prefix=f"{settings.api_v1_prefix}/conversations",
+        tags=["Conversations"],
+    )
+
+    logger.info("[ROUTER] Conversations registered")
+
+    # AI chat assistant
+
+    logger.debug("[ROUTER] Registering AI Chat")
+
+    app.include_router(
+        chat_router,
+        prefix=f"{settings.api_v1_prefix}/chat",
+        tags=["Chat"],
+    )
+
+    logger.info("[ROUTER] AI Chat registered")
+
+    # Charging stations
+
+    logger.debug("[ROUTER] Registering Charging Stations")
+
+    app.include_router(station_router)
+
+    logger.info("[ROUTER] Charging Stations registered")
+
+    # Addresses
+
+    logger.debug("[ROUTER] Registering Addresses")
+
+    app.include_router(addresses_router)
+
+    logger.info("[ROUTER] Addresses registered")
+
+    # Owner station and charger management
+
+    logger.debug("[ROUTER] Registering Owner Management")
+
+    app.include_router(
+        owner_router,
+        prefix=f"{settings.api_v1_prefix}/owner",
+        tags=["Owner Station Management"],
+    )
+
+    logger.info("[ROUTER] Owner Management registered")
+
+    # Driver vehicles and favorite stations
+
+    logger.debug("[ROUTER] Registering Driver Management")
+
+    app.include_router(
+        driver_router,
+        prefix=f"{settings.api_v1_prefix}/driver",
+    )
+
+    logger.info("[ROUTER] Driver Management registered")
+
+    # Driver bookings
+
+    logger.debug("[ROUTER] Registering Driver Bookings")
+
+    app.include_router(
+        bookings_router,
+        prefix=f"{settings.api_v1_prefix}/bookings",
+        tags=["Driver Bookings"],
+    )
+
+    logger.info("[ROUTER] Driver Bookings registered")
+
+    logger.info("[ROUTERS] All API routers registered successfully")
+
+except Exception:
+
+    logger.exception("[ROUTER FAILED] API router registration failed")
+    raise
+
+
+# ==========================================================
+# 8. HEALTH CHECK ENDPOINT
+# ==========================================================
 
 @app.get("/health", tags=["Health"])
 def health_check():
-    return {
+
+    logger.debug("[HEALTH] Health check started")
+
+    response = {
         "status": "healthy",
         "application": settings.app_name,
         "version": settings.app_version,
     }
 
+    logger.info("[HEALTH] Health check successful")
+
+    return response
+
+
+# ==========================================================
+# 9. DATABASE READINESS CHECK
+# ==========================================================
 
 @app.get("/ready", tags=["Health"])
 def readiness_check():
+
+    start_time = time.perf_counter()
+
+    logger.info("[READY] Database readiness check started")
+
     try:
+
+        logger.debug("[READY] Opening database connection")
+
         with engine.connect() as connection:
+
+            logger.debug("[READY] Database connection established")
+
+            logger.debug("[READY] Executing SELECT 1")
+
             connection.execute(text("SELECT 1"))
+
+            logger.debug("[READY] Database query completed")
+
+        duration = time.perf_counter() - start_time
+
+        logger.info(
+            "[READY] Database readiness check successful | Time: %.3fs",
+            duration,
+        )
 
         return {
             "status": "ready",
@@ -209,7 +420,13 @@ def readiness_check():
         }
 
     except Exception:
-        logger.exception("Database readiness check failed")
+
+        duration = time.perf_counter() - start_time
+
+        logger.exception(
+            "[READY FAILED] Database readiness check failed | Time: %.3fs",
+            duration,
+        )
 
         raise HTTPException(
             status_code=503,
@@ -218,3 +435,14 @@ def readiness_check():
                 "database": "unavailable",
             },
         )
+
+
+# ==========================================================
+# 10. APPLICATION INITIALIZATION COMPLETED
+# ==========================================================
+
+logger.info("=" * 60)
+logger.info("[APP] ChargeMate AI initialization completed")
+logger.info("[APP] Total registered routes: %s", len(app.routes))
+logger.info("[APP] Waiting for application startup")
+logger.info("=" * 60)

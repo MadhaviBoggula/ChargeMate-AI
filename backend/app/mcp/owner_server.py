@@ -20,6 +20,12 @@ from app.schemas.owner_station import (
     OwnerStationResponse,
     OwnerStationUpdate,
 )
+from app.core.logger import setup_logging, get_logger
+from app.core.trace import trace_execution
+
+setup_logging()
+logger = get_logger(__name__)
+logger.info("Owner MCP server initializing")
 
 mcp = FastMCP("chargemate-owner-tools")
 
@@ -130,6 +136,9 @@ def error_response(exc: Exception) -> dict:
 # ============================================================
 
 @mcp.tool()
+@trace_execution
+async def list_my_stations():
+    logger.info("MCP tool list_my_stations called")
 def list_my_stations(auth_context: dict[str, Any]) -> dict:
     """List all charging stations belonging to the authenticated owner."""
 
@@ -155,6 +164,9 @@ def list_my_stations(auth_context: dict[str, Any]) -> dict:
 
 
 @mcp.tool()
+@trace_execution
+async def get_station_details():
+    logger.info("MCP tool get_station_details called")
 def get_station_details(
     station_id: str,
     auth_context: dict[str, Any],
@@ -230,6 +242,9 @@ def create_station(
 
 
 @mcp.tool()
+@trace_execution
+async def update_station():
+    logger.info("MCP tool update_station called")
 def update_station(
     station_id: str,
     updates: dict[str, Any],

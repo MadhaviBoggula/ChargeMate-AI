@@ -24,6 +24,7 @@ dependencies = [
     "openai>=1.60.0",
     "groq>=1.7.0",
     "anthropic>=2.10.0",
+    "torch>=2.15.0",
 ]
 
 [dependency-groups]
@@ -39,3 +40,11 @@ testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
